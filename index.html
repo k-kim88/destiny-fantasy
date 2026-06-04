@@ -3,83 +3,157 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0b1020">
-<title>새 프로젝트</title>
+<meta name="theme-color" content="#0a0e1f">
+<title>데스티니 크루세이더</title>
 <style>
-  /* ===== 기본 리셋 ===== */
+  /* ===== 리셋 / 테마 ===== */
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   :root{
-    --bg:#0b1020; --panel:#141b33; --line:#26314f;
-    --text:#eaf0ff; --muted:#8fa0c8; --accent:#7aa2ff;
+    --bg-0:#070a16; --bg-1:#0e1430; --bg-2:#172352;
+    --gold:#e6c074; --gold-dim:#b8924a; --gold-line:rgba(230,192,116,.5);
+    --ink:#eef2ff; --muted:#9fb0d8; --faint:#5f6f9c;
+    --panel:rgba(12,20,46,.72); --line:#27325a;
+    --serif:"Iowan Old Style","Apple SD Gothic Neo",Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
   }
   html,body{height:100%;}
   body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
-    background:var(--bg); color:var(--text);
+    font-family:var(--sans); color:var(--ink);
+    background:var(--bg-0);
     display:flex; align-items:center; justify-content:center;
-    min-height:100dvh; overflow:hidden;
+    min-height:100dvh; overflow:hidden; -webkit-font-smoothing:antialiased;
   }
-  /* 모바일 화면 프레임 (전체 화면을 채움) */
+  /* 모바일 프레임 */
   #app{
-    position:relative; width:100%; max-width:460px; height:100dvh;
-    display:flex; flex-direction:column;
-    background:radial-gradient(120% 80% at 50% 0%, #16203f 0%, var(--bg) 60%);
+    position:relative; width:100%; max-width:460px; height:100dvh; overflow:hidden;
+    background:
+      radial-gradient(120% 70% at 50% -5%, var(--bg-2) 0%, var(--bg-1) 45%, var(--bg-0) 80%);
+  }
+  #app::after{ /* 비네트 */
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(110% 80% at 50% 40%, transparent 55%, rgba(0,0,0,.55) 100%);
   }
 
-  /* ===== 화면 ===== */
-  .screen{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; padding:28px; text-align:center;}
+  .screen{position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px; padding:30px; text-align:center;
+    animation:fade .35s ease;}
+  .screen.hidden{display:none;}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
 
-  .logo{font-size:34px; font-weight:800; letter-spacing:.04em; line-height:1.15;}
-  .logo span{color:var(--accent);}
-  .tagline{color:var(--muted); font-size:14px; letter-spacing:.02em;}
+  /* ===== 타이틀 로고 ===== */
+  .logo{user-select:none; margin-bottom:6px;}
+  .logo .word{display:block; font-family:var(--serif); font-weight:800; line-height:.96;
+    letter-spacing:.06em; font-size:46px;
+    background:linear-gradient(180deg,#fff7da 0%,#f0d28c 38%,#d7a948 54%,#9c6f2e 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    -webkit-text-fill-color:transparent;
+    text-shadow:0 1px 0 rgba(0,0,0,.3);}
+  .logo .word.small{font-size:40px;}
+  .rule{display:flex; align-items:center; justify-content:center; gap:10px; margin:14px 0 2px;}
+  .rule .ln{height:1px; width:54px; background:linear-gradient(90deg,transparent,var(--gold-line));}
+  .rule .ln.r{background:linear-gradient(90deg,var(--gold-line),transparent);}
+  .rule .gem{width:9px; height:9px; transform:rotate(45deg);
+    background:linear-gradient(135deg,#fff3c8,var(--gold-dim)); box-shadow:0 0 8px rgba(230,192,116,.5);}
+  .sub-ko{font-family:var(--serif); font-size:19px; letter-spacing:.34em; color:var(--gold);
+    padding-left:.34em;}
+  .tagline{color:var(--muted); font-size:12.5px; letter-spacing:.06em; margin-top:6px;}
 
-  .btn{
-    appearance:none; border:1px solid var(--line); background:var(--panel);
-    color:var(--text); font-size:16px; font-weight:600;
-    padding:14px 30px; border-radius:12px; cursor:pointer;
-    transition:transform .08s ease, border-color .15s ease, background .15s ease;
+  /* ===== 메뉴 ===== */
+  .menu{margin-top:30px; width:100%; max-width:280px; display:flex; flex-direction:column; gap:10px;}
+  .menu .item{
+    appearance:none; width:100%; font-family:var(--serif); font-size:17px; font-weight:600;
+    color:var(--ink); background:var(--panel); border:1px solid var(--gold-line);
+    padding:13px 18px; border-radius:10px; cursor:pointer; letter-spacing:.04em;
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    transition:transform .08s ease, color .15s, border-color .15s, background .15s;
   }
-  .btn:active{transform:scale(.97);}
-  .btn.primary{background:linear-gradient(180deg,#3f63c8,#2a47a0); border-color:#4f6fce;}
+  .menu .item:active{transform:scale(.98);}
+  .menu .item.primary{color:#1c1206;
+    background:linear-gradient(180deg,#f0d28c,#d7a948); border-color:#f0d28c;}
+  .menu .item.disabled{color:var(--faint); border-color:var(--line); cursor:default; background:transparent;}
 
-  .foot{padding:16px; text-align:center; color:var(--muted); font-size:11px; letter-spacing:.08em;}
+  .foot{position:absolute; bottom:16px; left:0; right:0; text-align:center;
+    color:var(--faint); font-size:10.5px; letter-spacing:.16em;}
+
+  /* placeholder 화면 */
+  .ph-title{font-family:var(--serif); font-size:24px; color:var(--gold); letter-spacing:.08em;}
+  .ph-text{color:var(--muted); font-size:14px; line-height:1.8; max-width:300px;}
+  .back{appearance:none; margin-top:8px; background:transparent; border:1px solid var(--gold-line);
+    color:var(--gold); font-size:14px; padding:10px 22px; border-radius:9px; cursor:pointer;}
 
   /* 토스트 */
-  #toast{
-    position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
-    background:rgba(20,27,51,.95); border:1px solid var(--line); color:var(--text);
+  #toast{position:absolute; bottom:64px; left:50%; transform:translateX(-50%);
+    background:rgba(12,20,46,.96); border:1px solid var(--gold-line); color:var(--ink);
     padding:10px 18px; border-radius:10px; font-size:13px; opacity:0;
-    transition:opacity .25s ease; pointer-events:none;
-  }
+    transition:opacity .25s ease; pointer-events:none; max-width:86%;}
 </style>
 </head>
 <body>
 <div id="app">
-  <!-- 화면이 여기에 렌더링됩니다 -->
-  <section class="screen" id="screen">
-    <div class="logo">새 <span>프로젝트</span></div>
-    <div class="tagline">백지에서 한 단계씩 만들어 갑니다</div>
-    <button class="btn primary" id="startBtn">시작</button>
+
+  <!-- ===== 타이틀 화면 ===== -->
+  <section class="screen" id="scTitle">
+    <div class="logo">
+      <span class="word">DESTINY</span>
+      <span class="word small">CRUSADER</span>
+    </div>
+    <div class="rule"><span class="ln"></span><span class="gem"></span><span class="ln r"></span></div>
+    <div class="sub-ko">데스티니 크루세이더</div>
+    <div class="tagline">운명을 건 십자군의 모험</div>
+
+    <div class="menu">
+      <button class="item primary" data-a="new">새 게임</button>
+      <button class="item disabled" data-a="cont">이어하기</button>
+      <button class="item" data-a="settings">설정</button>
+    </div>
+    <div class="foot">© 2026 · DESTINY CRUSADER · Ver 0.1</div>
   </section>
-  <div class="foot">STEP 0 · 시작점</div>
+
+  <!-- ===== 임시(다음 단계) 화면 ===== -->
+  <section class="screen hidden" id="scPlaceholder">
+    <div class="logo"><span class="word small">DESTINY</span></div>
+    <div class="ph-title" id="phTitle">준비 중</div>
+    <div class="ph-text" id="phText">이 부분은 다음 단계에서 만듭니다.</div>
+    <button class="back" data-a="back">‹ 타이틀로</button>
+  </section>
+
   <div id="toast"></div>
 </div>
 
 <script>
   "use strict";
-  // 아주 작은 유틸 — 여기서부터 단계적으로 키워갑니다.
-  const $ = (s) => document.querySelector(s);
-  function toast(msg) {
+  const $  = (s) => document.querySelector(s);
+  const $$ = (s) => document.querySelectorAll(s);
+
+  function toast(msg){
     const el = $("#toast");
-    el.textContent = msg;
-    el.style.opacity = 1;
-    clearTimeout(el._t);
-    el._t = setTimeout(() => (el.style.opacity = 0), 1500);
+    el.textContent = msg; el.style.opacity = 1;
+    clearTimeout(el._t); el._t = setTimeout(() => el.style.opacity = 0, 1600);
   }
 
-  $("#startBtn").addEventListener("click", () => {
-    toast("여기서부터 만들어 가요 — 다음에 무엇을 추가할지 알려주세요!");
-  });
+  // 아주 단순한 화면 전환기 — 여기서부터 화면을 늘려갑니다.
+  function show(id){
+    $$(".screen").forEach(s => s.classList.toggle("hidden", s.id !== id));
+  }
+
+  function openPlaceholder(title, text){
+    $("#phTitle").textContent = title;
+    $("#phText").innerHTML = text;
+    show("scPlaceholder");
+  }
+
+  // 타이틀 메뉴
+  $$("#scTitle .item").forEach(btn => btn.addEventListener("click", () => {
+    const a = btn.dataset.a;
+    if (a === "new")       openPlaceholder("새 게임", "모험의 시작 화면을 다음 단계에서 만듭니다.<br>(캐릭터 · 필드 · 전투…)");
+    else if (a === "cont") toast("저장된 모험이 아직 없어요");
+    else if (a === "settings") openPlaceholder("설정", "사운드 · 언어 등 설정을 다음 단계에서 추가합니다.");
+  }));
+
+  // 뒤로
+  $$('[data-a="back"]').forEach(b => b.addEventListener("click", () => show("scTitle")));
+
+  show("scTitle");
 </script>
 </body>
 </html>
