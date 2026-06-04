@@ -312,14 +312,37 @@
   .battler.boss .bhp{visibility:hidden;}
   .battler.boss.revealed .bhp{visibility:visible;}
   .bosslabel{font-size:11px; color:#ff8a7a; margin-top:2px; font-family:var(--serif); letter-spacing:.05em;}
-  .bt-log{width:100%; padding:11px 16px; min-height:46px; color:var(--ink); font-size:14px; line-height:1.45;
-    background:rgba(9,14,32,.93); border-top:1px solid var(--gold-line);}
-  .bt-menu{width:100%; padding:10px 14px 18px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; min-height:62px;}
-  .bt-menu button{font-family:var(--serif); font-size:15px; font-weight:600; color:#1c1206;
-    background:linear-gradient(180deg,#f0d28c,#d7a948); border:1px solid #f5dca0; border-radius:9px; padding:12px 4px; cursor:pointer;}
-  .bt-menu button.sub{background:rgba(12,20,46,.92); color:var(--gold); border-color:var(--gold-line);}
-  .bt-menu button:active{transform:scale(.97);}
-  .bt-menu button:disabled{opacity:.4; cursor:default;}
+  /* FF식 메시지 배너 */
+  .bt-log{width:100%; padding:9px 16px; min-height:40px; color:#eef4ff; font-size:13.5px; line-height:1.4; text-align:center;
+    background:linear-gradient(180deg,rgba(18,28,64,.96),rgba(10,16,40,.96)); border-top:1px solid var(--gold-line);}
+  /* FF식 하단: 커맨드 창 + 파티 상태 창 */
+  .bt-bottom{display:flex; gap:8px; width:100%; padding:8px 10px 14px; align-items:stretch;}
+  .ff-win{background:linear-gradient(180deg,rgba(20,32,78,.94),rgba(10,18,48,.94));
+    border:2px solid #9fb6e8; border-radius:8px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 4px 14px rgba(0,0,0,.4);}
+  .bt-cmd{width:43%; min-height:128px; padding:6px; display:flex; flex-direction:column; gap:2px;
+    background:linear-gradient(180deg,rgba(20,32,78,.94),rgba(10,18,48,.94)); border:2px solid #9fb6e8; border-radius:8px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 4px 14px rgba(0,0,0,.4);}
+  .bt-cmd button{position:relative; font-family:var(--serif); font-size:15px; color:#eef4ff; text-align:left;
+    background:transparent; border:none; border-radius:5px; padding:9px 10px 9px 24px; cursor:pointer; letter-spacing:.02em;}
+  .bt-cmd button::before{content:"▶"; position:absolute; left:7px; top:50%; transform:translateY(-50%); color:var(--gold); font-size:11px; opacity:0; transition:opacity .1s;}
+  .bt-cmd button:hover:not(:disabled), .bt-cmd button:active{background:rgba(120,150,230,.28);}
+  .bt-cmd button:hover:not(:disabled)::before{opacity:1;}
+  .bt-cmd button.sub{color:var(--gold);}
+  .bt-cmd button:disabled{opacity:.4; cursor:default;}
+  /* 파티 상태 창 */
+  .bt-party{flex:1; min-height:128px; padding:7px 9px; display:flex; flex-direction:column; justify-content:center; gap:5px;
+    background:linear-gradient(180deg,rgba(20,32,78,.94),rgba(10,18,48,.94)); border:2px solid #9fb6e8; border-radius:8px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 4px 14px rgba(0,0,0,.4);}
+  .bp-row{display:grid; grid-template-columns:1fr auto; gap:2px 8px; align-items:center; padding:2px 4px; border-radius:5px;}
+  .bp-row.act{background:rgba(230,192,116,.18); box-shadow:inset 0 0 0 1px var(--gold-line);}
+  .bp-row.down{opacity:.45;}
+  .bp-name{font-family:var(--serif); font-size:12.5px; color:#eef4ff;}
+  .bp-row.act .bp-name{color:var(--gold);}
+  .bp-nums{font-family:var(--sans); font-size:11px; color:#aebbe0; font-variant-numeric:tabular-nums; text-align:right;}
+  .bp-nums .bp-mp{color:#8fb6ff; margin-left:6px;}
+  .bp-bar{grid-column:1/3; height:4px; background:rgba(0,0,0,.5); border-radius:2px; overflow:hidden;}
+  .bp-bar > i{display:block; height:100%; background:linear-gradient(180deg,#5fce7a,#2f8a48);}
+  .bp-bar.low > i{background:linear-gradient(180deg,#e2574a,#a32f2a);}
 </style>
 </head>
 <body>
@@ -371,7 +394,10 @@
       </div>
     </div>
     <div class="bt-log" id="btLog"></div>
-    <div class="bt-menu" id="btMenu"></div>
+    <div class="bt-bottom">
+      <div class="bt-cmd" id="btMenu"></div>
+      <div class="bt-party" id="btParty"></div>
+    </div>
   </section>
 
   <!-- ===== 저장/불러오기 슬롯 ===== -->
@@ -877,7 +903,7 @@
   function slotsBack(){ if (_slotBack === "menu") backToMenu(); else if (_slotBack === "title"){ refreshTitle(); show("scTitle"); } else resumeField(); }
 
   /* ===== 메뉴(FF/테일즈식) — 통합 진입 ===== */
-  const JOBS = { gwangmin:"용사", leon:"성기사", gangwoo:"권사", aria:"마법사", mir:"사제", jihun:"궁수", sera:"도적", daon:"창기사" };
+  const JOBS = { gwangmin:"용사", leon:"성기사", gangwoo:"권사", aria:"마법사", mir:"사제", jihun:"궁수", sera:"도적", daon:"창기사", rina:"점성술사" };
   function portraitHTML(h){
     const img = h.sprites ? `<img class="pf-img" src="${h.sprites.idle}" onload="this.closest('.eq-portrait').classList.add('hasimg')" onerror="this.remove()">` : "";
     return `${img}<span class="pf-emo">${h.emoji}</span>`;
@@ -1129,6 +1155,7 @@
     { key:"jihun",    name:"지훈", emoji:"🏹", g:"phys", row:"back",  base:{maxHp:62,maxMp:14,atk:16,def:6, mag:8, spd:15}, abil:["shot"] },
     { key:"sera",     name:"세라", emoji:"🗡️", g:"phys", row:"reserve", base:{maxHp:60,maxMp:12,atk:17,def:7,mag:6, spd:16}, abil:["smash"] },
     { key:"daon",     name:"다온", emoji:"🔱", g:"phys", row:"reserve", base:{maxHp:80,maxMp:14,atk:17,def:9,mag:7, spd:9},  abil:["smash"] },
+    { key:"rina",     name:"리나", emoji:"🔮", g:"mag",  row:"reserve", base:{maxHp:48,maxMp:44,atk:8, def:5, mag:20,spd:13}, abil:["fire","bolt"] },
   ];
   function mkHero(d){ return { key:d.key, name:d.name, emoji:d.emoji, sprites:d.sprites||null, g:d.g, row:d.row,
     abilities:d.abil.map(k=>({ ...AB[k] })), side:"hero", lv:1, exp:0, expNext:24,
@@ -1179,7 +1206,7 @@
   let roster = [], party = [], enemies = [], items = DEFAULT_INV();
   let prog = { gold:120, bossDefeated:false };
   let _bossObj = null;
-  let B = null, _enc = 0, _encNext = TILE * 5;
+  let B = null, _enc = 0, _encNext = TILE * 5, _acting = null;
 
   const battleParty = () => roster.filter(h => h.row !== "reserve");
 
@@ -1221,8 +1248,19 @@
     if (b.side === "hero"){ const m = b.el.querySelector(".bmp>i"); if (m) m.style.width = Math.max(0, b.mp/eStat(b,"maxMp")*100) + "%"; }
     if (b.boss){ const lab = b.el.querySelector(".bosslabel");
       if (ratio <= 0.35){ b.el.classList.add("revealed"); if (lab) lab.textContent = `HP ${Math.max(0,b.hp)} / ${b.maxHp}`; }
-      else if (lab) lab.textContent = "HP ???"; } }
+      else if (lab) lab.textContent = "HP ???"; }
+    if (b.side === "hero") renderBP(); }
   const setActive = (b,on) => b.el && b.el.classList.toggle("active", on);
+  // FF식 파티 상태창
+  function renderBP(){
+    const el = document.getElementById("btParty"); if (!el || !party.length) return;
+    el.innerHTML = party.map(h => { const mhp = eStat(h,"maxHp"), mmp = eStat(h,"maxMp"), low = h.hp/mhp <= 0.3;
+      return `<div class="bp-row${h===_acting?" act":""}${h.hp<=0?" down":""}">
+        <span class="bp-name">${h.name}</span>
+        <span class="bp-nums">${Math.max(0,h.hp)}/${mhp}<span class="bp-mp">${h.mp}/${mmp}</span></span>
+        <span class="bp-bar${low?" low":""}"><i style="width:${Math.max(0,h.hp/mhp*100)}%"></i></span></div>`;
+    }).join("");
+  }
 
   // ---- effects ----
   function popNum(b, txt, cls=""){ const d = document.createElement("div"); d.className = "dmgnum " + cls; d.textContent = txt; b.el.appendChild(d); setTimeout(()=>d.remove(), 850); }
@@ -1343,9 +1381,11 @@
         if (!aliveE().length) return victory();
         if (!aliveH().length) return defeat();
         a.defending = false; updateBattler(a); restPose(a);
-        if (a.stun){ a.stun = false; stunOff(a); setLog((a.label||a.name) + " 기절 — 행동할 수 없다!"); await delay(850); restPose(a); continue; }
-        if (a.side === "hero"){ const r = await heroTurn(a); if (r === "flee"){ setLog("무사히 도망쳤다!"); clearMenu(); await delay(650); B = null; resumeField(); return; } }
+        _acting = a.side === "hero" ? a : null; renderBP();
+        if (a.stun){ a.stun = false; stunOff(a); setLog((a.label||a.name) + " 기절 — 행동할 수 없다!"); await delay(850); restPose(a); _acting = null; renderBP(); continue; }
+        if (a.side === "hero"){ const r = await heroTurn(a); if (r === "flee"){ setLog("무사히 도망쳤다!"); clearMenu(); await delay(650); B = null; _acting = null; resumeField(); return; } }
         else await enemyAct(a);
+        _acting = null; renderBP();
         await delay(150);
       }
     }
