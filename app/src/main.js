@@ -3,14 +3,18 @@ import "./style.css";
 import { initScreens, registerScreen, showScreen } from "./core/screens.js";
 import { loadAssets } from "./core/assets.js";
 import { checkSave } from "./core/storage.js";
+import { preloadImages } from "./game/imagecache.js";
 import { TitleScreen } from "./ui/title.js";
-import { FieldScreen, CharsScreen, SettingsScreen } from "./ui/stubs.js";
+import { FieldScreen } from "./game/field.js";
+import { CharsScreen, SettingsScreen, MenuScreen, BattleScreen } from "./ui/stubs.js";
 
 const root = document.getElementById("screens");
 initScreens(root);
 
 registerScreen("title", TitleScreen);
 registerScreen("field", FieldScreen);
+registerScreen("battle", BattleScreen);
+registerScreen("menu", MenuScreen);
 registerScreen("chars", CharsScreen);
 registerScreen("settings", SettingsScreen);
 
@@ -37,6 +41,7 @@ async function boot() {
   showLoading(0);
   try {
     await loadAssets((done, total) => showLoading(Math.round((done / total) * 100)));
+    preloadImages();
   } catch (e) {
     root.innerHTML = `<section class="screen" style="position:static;display:flex;align-items:center;justify-content:center;padding:24px;color:var(--atk);text-align:center">에셋 로딩 실패<br><small style="color:var(--ink-3)">${e.message}</small></section>`;
     return;
