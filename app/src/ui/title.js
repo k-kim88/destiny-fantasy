@@ -2,6 +2,8 @@
 import { L, getLang, setLang } from "../core/i18n.js";
 import { hasSaveData } from "../core/storage.js";
 import { showScreen } from "../core/screens.js";
+import { newGame, loadGame } from "../game/state.js";
+import { toast } from "../core/toast.js";
 
 export function TitleScreen() {
   return {
@@ -47,8 +49,8 @@ export function TitleScreen() {
         li.onmouseenter = () => { items.forEach(x => x.classList.remove("sel")); li.classList.add("sel"); };
         li.onclick = () => {
           const a = li.dataset.a;
-          if (a === "new") showScreen("field", { fresh: true });
-          else if (a === "cont" && canCont) showScreen("field", { fresh: false });
+          if (a === "new") { newGame(); showScreen("field"); }
+          else if (a === "cont" && canCont) { if (loadGame()) showScreen("field"); else toast(L("noSave")); }
           else if (a === "chars") showScreen("chars");
           else if (a === "settings") showScreen("settings");
         };
