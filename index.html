@@ -1113,7 +1113,7 @@
     if (!h.abilities.length){ list.innerHTML = `<div class="inv-empty">배운 마법·스킬이 없어요</div>`; return; }
     h.abilities.forEach(ab => {
       const isFieldHeal = ab.kind === "heal" || ab.kind === "cure" || (ab.kind === "summon" && ab.target === "allAllies");
-      const typeLabel = ab.kind === "summon" ? "소환" : ab.kind === "heal" ? "회복" : ab.kind === "cure" ? "치료" : ab.kind === "mag" ? "마법" : "스킬";
+      const typeLabel = ab.kind === "summon" ? "소환" : ab.kind === "heal" ? "회복" : ab.kind === "cure" ? "치료" : ab.kind === "ail" ? "상태마법" : ab.kind === "mag" ? "마법" : "스킬";
       const can = isFieldHeal && h.mp >= ab.mp;
       const act = isFieldHeal ? (h.mp >= ab.mp ? "사용" : "MP부족") : "전투 전용";
       const row = document.createElement("button"); row.className = "invrow";
@@ -1233,7 +1233,7 @@
   }
 
   /* ===== 상점 (구매 / 판매) ===== */
-  const SHOP_STOCK = ["potion","hipotion","ether","antidote","remedy","sword","greatsword","staff","bow","helm","cap","plate","robe","gloves","boots","shield","ring","amulet"];
+  const SHOP_STOCK = ["potion","hipotion","ether","antidote","remedy","sword","greatsword","staff","bow","venomdagger","palsymace","helm","cap","plate","robe","gloves","boots","shield","ring","amulet"];
   // 상태이상 정의
   const STATUS = { poison:{name:"독",icon:"🟣"}, paralyze:{name:"마비",icon:"⚡"}, silence:{name:"침묵",icon:"🤐"}, sleep:{name:"수면",icon:"💤"} };
   function addStatus(b, key, turns){ if (!b.st) b.st = {}; b.st[key] = Math.max(b.st[key]||0, turns); }
@@ -1372,6 +1372,8 @@
     bolt: {name:"라이트닝", mp:14, kind:"mag",  power:0.8, target:"allEnemies", emo:"⚡"},
     heal: {name:"힐",     mp:8,  kind:"heal", power:1.0, target:"ally",      emo:"✨"},
     cure: {name:"큐어",   mp:6,  kind:"cure", target:"ally", emo:"🌿"},
+    poisonmagic:{name:"포이즌", mp:7, kind:"ail", ail:"poison", target:"enemy", emo:"🟣"},
+    sleepmagic: {name:"슬립",   mp:8, kind:"ail", ail:"sleep",  target:"enemy", emo:"💤"},
     // 소환수
     ifrit:  {name:"소환:이프리트", mp:24, kind:"summon", power:1.6, target:"allEnemies", emo:"🔥", glyph:"😈", summon:"이프리트"},
     shiva:  {name:"소환:시바",   mp:26, kind:"summon", power:1.5, target:"allEnemies", emo:"❄️", glyph:"🧊", summon:"시바"},
@@ -1387,7 +1389,7 @@
     { key:"jihun",    name:"지훈", emoji:"🏹", g:"phys", row:"back",  base:{maxHp:62,maxMp:14,atk:16,def:6, mag:8, spd:15}, abil:["shot"] },
     { key:"sera",     name:"세라", emoji:"🗡️", g:"phys", row:"reserve", base:{maxHp:60,maxMp:12,atk:17,def:7,mag:6, spd:16}, abil:["smash"] },
     { key:"daon",     name:"다온", emoji:"🔱", g:"phys", row:"reserve", base:{maxHp:80,maxMp:14,atk:17,def:9,mag:7, spd:9},  abil:["smash"] },
-    { key:"rina",     name:"리나", emoji:"🔮", g:"mag",  row:"reserve", base:{maxHp:48,maxMp:44,atk:8, def:5, mag:20,spd:13}, abil:["fire","bolt","shiva"] },
+    { key:"rina",     name:"리나", emoji:"🔮", g:"mag",  row:"reserve", base:{maxHp:48,maxMp:44,atk:8, def:5, mag:20,spd:13}, abil:["fire","bolt","shiva","poisonmagic","sleepmagic"] },
   ];
   function mkHero(d){ return { key:d.key, name:d.name, emoji:d.emoji, sprites:d.sprites||null, g:d.g, row:d.row,
     abilities:d.abil.map(k=>({ ...AB[k] })), side:"hero", lv:1, exp:0, expNext:24,
@@ -1420,23 +1422,33 @@
     gloves:  { name:"건틀릿",   type:"gloves", icon:"🧤", bonus:{atk:2,def:2},    price:80,  desc:"공격 +2, 방어 +2" },
     boots:   { name:"강철 군화", type:"boots", icon:"🥾", bonus:{def:2,spd:2},    price:80,  desc:"방어 +2, 속도 +2" },
     shield:  { name:"강철 방패", type:"shield", icon:"🛡️", bonus:{def:6},         price:150, desc:"방어 +6" },
+    venomdagger:{ name:"독아 단검", type:"weapon", icon:"🗡️", bonus:{atk:5,spd:1}, inflict:{poison:.3}, price:230, desc:"공격 +5, 속도 +1 · 독 부여" },
+    palsymace:  { name:"마비 철퇴", type:"weapon", icon:"🔨", bonus:{atk:9},        inflict:{paralyze:.25}, price:280, desc:"공격 +9 · 마비 부여" },
     ring:    { name:"힘의 반지", type:"accessory", icon:"💍", bonus:{atk:3,maxHp:8}, price:140, desc:"공격 +3, HP +8" },
     amulet:  { name:"수호 부적", type:"accessory", icon:"📿", bonus:{def:3,maxMp:10}, price:140, desc:"방어 +3, MP +10" },
   };
-  const bonusText = it => it.bonus ? Object.keys(it.bonus).map(k => `${STAT_LABEL[k]} ${it.bonus[k]>0?"+":""}${it.bonus[k]}`).join(", ") : (it.desc||"");
+  const bonusText = it => { let s = it.bonus ? Object.keys(it.bonus).map(k => `${STAT_LABEL[k]} ${it.bonus[k]>0?"+":""}${it.bonus[k]}`).join(", ") : "";
+    if (it.inflict){ const inf = Object.keys(it.inflict).map(k => `${STATUS[k].name} 부여`).join(", "); s = s ? s + " · " + inf : inf; }
+    return s || (it.desc||""); };
   function eBonus(h, key){ let s = 0; if (h.equip) for (const sl of EQ_SLOTS){ const id = h.equip[sl]; if (id && DB[id] && DB[id].bonus && DB[id].bonus[key]) s += DB[id].bonus[key]; } return s; }
+  function gearInflict(h){ const m = {}; if (h.equip) for (const sl of EQ_SLOTS){ const id = h.equip[sl], it = id && DB[id]; if (it && it.inflict) for (const k in it.inflict) m[k] = Math.max(m[k]||0, it.inflict[k]); } return m; }
   function eStat(h, key){ return (h[key] || 0) + eBonus(h, key); }
   function clampHpMp(h){ h.hp = Math.min(h.hp, eStat(h,"maxHp")); h.mp = Math.min(h.mp, eStat(h,"maxMp")); }
   const DEFAULT_INV = () => ({ potion:5, hipotion:1, ether:2, sword:1, staff:1, helm:1, plate:1, shield:1, gloves:1, boots:1, ring:1 });
 
   const ENEMY_DEF = [
-    { name:"슬라임", emoji:"🟢", maxHp:34, atk:11, def:3, spd:7,  exp:6,  gold:5,  drops:[{id:"potion",chance:.3}], inflict:{poison:.3} },
-    { name:"고블린", emoji:"👺", maxHp:52, atk:16, def:6, spd:10, exp:14, gold:12, drops:[{id:"potion",chance:.4},{id:"sword",chance:.08},{id:"antidote",chance:.2}], inflict:{silence:.22} },
-    { name:"박쥐",   emoji:"🦇", maxHp:26, atk:13, def:2, spd:15, exp:8,  gold:6,  drops:[{id:"ether",chance:.25}], inflict:{sleep:.25} },
-    { name:"늑대",   emoji:"🐺", maxHp:44, atk:17, def:4, spd:13, exp:13, gold:10, drops:[{id:"hipotion",chance:.12},{id:"boots",chance:.06}], inflict:{paralyze:.25} },
+    { name:"슬라임", emoji:"🟢", maxHp:34, atk:11, def:3, spd:7,  exp:6,  gold:5,  drops:[{id:"potion",chance:.3}] },
+    { name:"고블린", emoji:"👺", maxHp:52, atk:16, def:6, spd:10, exp:14, gold:12, drops:[{id:"potion",chance:.4},{id:"sword",chance:.08}] },
+    { name:"박쥐",   emoji:"🦇", maxHp:26, atk:13, def:2, spd:15, exp:8,  gold:6,  drops:[{id:"ether",chance:.25}] },
+    { name:"늑대",   emoji:"🐺", maxHp:44, atk:17, def:4, spd:13, exp:13, gold:10, drops:[{id:"hipotion",chance:.12},{id:"boots",chance:.06}] },
+    // 상태이상 속성 몬스터 — 공격 시 상태이상 부여
+    { name:"독슬라임", emoji:"🫧", maxHp:46, atk:12, def:4, spd:8,  exp:12, gold:9,  drops:[{id:"antidote",chance:.4}], inflict:{poison:.45} },
+    { name:"최면술사", emoji:"🧞", maxHp:40, atk:14, def:5, spd:12, exp:16, gold:14, drops:[{id:"ether",chance:.3}],   inflict:{sleep:.4} },
+    { name:"메두사",   emoji:"🐍", maxHp:62, atk:19, def:7, spd:11, exp:24, gold:20, drops:[{id:"remedy",chance:.15},{id:"amulet",chance:.05}], inflict:{paralyze:.4} },
+    { name:"마녀",     emoji:"🧙‍♀️", maxHp:48, atk:15, def:5, spd:13, exp:18, gold:16, drops:[{id:"cap",chance:.06}], inflict:{silence:.4} },
   ];
   const BOSS = { name:"고대 수호기사", emoji:"🐲", maxHp:620, atk:34, def:14, spd:11, exp:240, gold:350, boss:true,
-    drops:[{id:"greatsword",chance:1},{id:"amulet",chance:1},{id:"hipotion",chance:1},{id:"remedy",chance:1}], inflict:{paralyze:.3} };
+    drops:[{id:"greatsword",chance:1},{id:"amulet",chance:1},{id:"hipotion",chance:1},{id:"remedy",chance:1}] };
   let roster = [], party = [], enemies = [], items = DEFAULT_INV();
   const newItems = new Set();                 // 새로 얻은 아이템(가방에서 NEW 표시)
   function addNew(id){ newItems.add(id); }
@@ -1540,8 +1552,11 @@
     if (tgt.side === "hero" && tgt.hp > 0) heroPose(tgt, crit ? "staggered" : "hit");
     if (opt.kind === "mag") att.el.classList.remove("cast");
     if (crit && tgt.hp > 0 && Math.random() < 0.5){ tgt.stun = true; stunOn(tgt); popNum(tgt, "기절!", "miss"); }
-    // 공격자의 상태이상 부여
-    if (att.inflict && tgt.hp > 0){ for (const k in att.inflict){ if (Math.random() < att.inflict[k]){ addStatus(tgt, k, 3); popNum(tgt, STATUS[k].name+"!", "miss"); updateBattler(tgt); break; } } }
+    // 공격자의 상태이상 부여 (적=속성, 아군=장비). 물리 공격에만 적용
+    if (opt.kind === "phys" && tgt.hp > 0){
+      const inf = att.side === "hero" ? gearInflict(att) : att.inflict;
+      if (inf) for (const k in inf){ if (Math.random() < inf[k]){ addStatus(tgt, k, 3); popNum(tgt, STATUS[k].name+"!", "miss"); updateBattler(tgt); break; } }
+    }
     await delay(crit ? 420 : 300);
     restPose(att);
     if (tgt.hp <= 0){ if (tgt.side === "hero") heroPose(tgt, "death"); await die(tgt); }
@@ -1637,6 +1652,9 @@
         const t = await pickTarget(ab.target === "ally" ? "hero" : "enemy"); if (!t) continue;
         clearMenu(); h.mp -= ab.mp; updateBattler(h); setLog(`${h.name} — ${ab.name}!`);
         if (ab.kind === "cure"){ heroPose(h,"casting"); h.el.classList.add("cast"); SFX.heal(); await delay(360); cureAll(t); sparkAt(t,"🌿"); popNum(t,"상태 회복","heal"); updateBattler(t); await delay(360); h.el.classList.remove("cast"); restPose(h); break; }
+        if (ab.kind === "ail"){ heroPose(h,"casting"); h.el.classList.add("cast"); SFX.fire(); await delay(360);
+          if (Math.random() < 0.8){ addStatus(t, ab.ail, 4); sparkAt(t, ab.emo); popNum(t, STATUS[ab.ail].name+"!", "miss"); } else popNum(t, "실패", "miss");
+          updateBattler(t); await delay(360); h.el.classList.remove("cast"); restPose(h); break; }
         await act(h, t, { power:ab.power, kind:ab.kind, emo:ab.emo }); break; }
       if (c.k === "item"){ const k = c.item; if (!items[k]) continue; const it = DB[k];
         const t = await pickTarget("hero"); if (!t) continue; clearMenu();
