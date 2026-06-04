@@ -178,15 +178,21 @@
   .menu-cmds .mcmd{font-family:var(--serif); font-size:17px; color:var(--ink); text-align:left;
     background:var(--panel); border:1px solid var(--gold-line); border-radius:10px; padding:13px 16px; cursor:pointer;}
   .menu-cmds .mcmd:active{transform:scale(.98);}
-  .menu-party{flex:1; display:flex; flex-direction:column; gap:8px; overflow-y:auto;}
-  .mp-row{display:flex; align-items:center; gap:9px; background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:8px 10px;}
-  .mp-row .mp-emo{font-size:24px;}
-  .mp-row .mp-info{flex:1; font-family:var(--serif); color:var(--ink); font-size:13px;}
+  .menu-party{flex:1; display:flex; flex-direction:column; gap:7px; overflow-y:auto;}
+  .mp-row{display:flex; align-items:center; gap:9px; text-align:left; background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:7px 9px; cursor:pointer;}
+  .mp-row.r-front{border-left:3px solid var(--gold);}
+  .mp-row.r-back{border-left:3px solid #6aa8ff;}
+  .mp-row.r-reserve{opacity:.7; border-left:3px solid var(--faint);}
+  .eq-portrait.mini{width:38px; height:38px; flex:none; border-radius:8px;}
+  .eq-portrait.mini .pf-emo{font-size:24px;}
+  .mp-row .mp-info{flex:1; font-family:var(--serif); color:var(--ink); font-size:13px; min-width:0;}
+  .mp-row .mp-job{color:var(--gold-dim); font-size:11px;}
+  .mp-row .mp-badge{float:right; font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:1px 5px;}
+  .mp-row .mp-line{display:block; color:var(--muted); font-size:10.5px; font-family:var(--sans); margin-top:2px;}
   .mp-row .mp-bars{display:block; height:5px; margin-top:4px; background:rgba(0,0,0,.5); border-radius:3px; overflow:hidden;}
   .mp-row .mp-bars i{display:block; height:100%;}
   .mp-row .mp-bars i.hp{background:linear-gradient(180deg,#5fce7a,#2f8a48);}
-  .mp-row .mp-bars i.mp{background:linear-gradient(180deg,#6aa8ff,#2f5fb0);}
-  .menu-foot{padding:12px; text-align:center; color:var(--gold); font-size:14px;}
+  .menu-foot{padding:12px; text-align:center; color:var(--gold); font-size:13px;}
 
   /* 초상화 */
   .eq-portrait{position:relative; width:80px; height:80px; border:1px solid var(--gold-line); border-radius:10px;
@@ -383,7 +389,7 @@
       <div class="menu-cmds" id="menuCmds"></div>
       <div class="menu-party" id="menuParty"></div>
     </div>
-    <div class="menu-foot">🪙 골드 <span id="menuGold">0</span></div>
+    <div class="menu-foot">📍 <span id="menuLoc">북부 숲길</span> · 🪙 골드 <span id="menuGold">0</span></div>
   </section>
 
   <!-- ===== 스테이터스 ===== -->
@@ -733,7 +739,7 @@
   }
   function drawEmoObj(sx, sy, emo, sh, glow){
     shadow(sx, sy, sh);
-    if (glow){ const p = 0.5+0.5*Math.sin(_t*0.005); cx.fillStyle = `rgba(220,60,42,${0.15+0.25*p})`; cx.beginPath(); cx.arc(sx, sy-TILE*0.5, TILE*0.5, 0, 7); cx.fill(); }
+    if (glow){ const p = 0.5+0.5*Math.sin(t*0.005); cx.fillStyle = `rgba(220,60,42,${0.15+0.25*p})`; cx.beginPath(); cx.arc(sx, sy-TILE*0.5, TILE*0.5, 0, 7); cx.fill(); }
     cx.font = `${Math.round(TILE*0.95)}px serif`; cx.textAlign = "center"; cx.textBaseline = "alphabetic";
     cx.fillText(emo, sx, sy);
     cx.textAlign = "left";
@@ -878,20 +884,23 @@
   }
   function openGameMenu(){ stopField(); renderGameMenu(); show("scMenu"); }
   function backToMenu(){ renderGameMenu(); show("scMenu"); }
+  const ROW_BADGE = { front:"전열", back:"후열", reserve:"대기" };
   function renderGameMenu(){
     document.getElementById("menuGold").textContent = prog.gold;
-    const cmds = [["status","스테이터스"],["equip","장비"],["items","아이템"],["party","배치"],["save","저장"],["close","닫기"]];
+    const loc = document.getElementById("menuLoc"); if (loc) loc.textContent = prog.bossDefeated ? "북부 숲길 (정화됨)" : "북부 숲길";
+    const cmds = [["status","📊 스테이터스"],["equip","🎒 장비"],["items","🧪 아이템"],["party","👥 배치"],["save","💾 저장"],["close","✖ 닫기"]];
     const mc = document.getElementById("menuCmds"); mc.innerHTML = "";
     cmds.forEach(([k,l]) => { const b = document.createElement("button"); b.className = "mcmd"; b.textContent = l;
       b.onclick = () => ({ status:()=>openStatus(), equip:()=>openEquip("weapon"), items:()=>openEquip("consumable"),
         party:()=>openParty(), save:()=>openSlots("save","menu"), close:()=>resumeField() }[k]());
       mc.appendChild(b); });
     const mp = document.getElementById("menuParty"); mp.innerHTML = "";
-    battleParty().forEach(h => { const d = document.createElement("div"); d.className = "mp-row";
-      d.innerHTML = `<span class="mp-emo">${h.emoji}</span>
-        <span class="mp-info"><b>${h.name}</b> <span class="p-lv">Lv.${h.lv}</span>
-          <span class="mp-bars"><i class="hp" style="width:${h.hp/eStat(h,"maxHp")*100}%"></i></span>
-          <span class="mp-bars"><i class="mp" style="width:${h.mp/eStat(h,"maxMp")*100}%"></i></span></span>`;
+    roster.forEach((h, i) => { const d = document.createElement("button"); d.className = "mp-row r-" + h.row;
+      d.innerHTML = `<span class="eq-portrait mini"><span class="pf-emo">${h.emoji}</span></span>
+        <span class="mp-info"><b>${h.name}</b> <span class="mp-job">${JOBS[h.key]||""}</span> <span class="mp-badge">${ROW_BADGE[h.row]}</span>
+          <span class="mp-line">Lv.${h.lv}　HP ${h.hp}/${eStat(h,"maxHp")}　MP ${h.mp}/${eStat(h,"maxMp")}</span>
+          <span class="mp-bars"><i class="hp" style="width:${h.hp/eStat(h,"maxHp")*100}%"></i></span></span>`;
+      d.onclick = () => { _stHero = i; openStatus(); };   // 멤버 탭하면 스테이터스로
       mp.appendChild(d); });
   }
 
