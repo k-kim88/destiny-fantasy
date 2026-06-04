@@ -136,6 +136,39 @@
     border-radius:7px; padding:7px 8px; cursor:pointer;}
   .prow .p-btns button.on{color:#1c1206; background:linear-gradient(180deg,#f0d28c,#d7a948); border-color:#f5dca0;}
 
+  /* 필드 추가 HUD */
+  .hud-bag{position:absolute; top:128px; right:14px; z-index:10;
+    background:var(--panel); border:1px solid var(--gold-line); color:var(--gold);
+    font-size:12px; padding:6px 11px; border-radius:9px; cursor:pointer;}
+  .hud-gold{position:absolute; top:70px; left:14px; z-index:10;
+    background:var(--panel); border:1px solid var(--gold-line); color:var(--gold);
+    font-size:12px; padding:5px 10px; border-radius:9px;}
+
+  /* 장비창 (디아블로식) */
+  .eq-head{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .eq-head .eq-who{font-family:var(--serif); font-size:18px; color:var(--gold);}
+  .eq-arrow{font-size:20px; color:var(--gold); background:var(--panel); border:1px solid var(--gold-line); border-radius:8px; padding:4px 14px; cursor:pointer;}
+  .eq-top{display:flex; gap:10px;}
+  .paperdoll{flex:1; display:grid; gap:6px; grid-template-columns:repeat(3,1fr);
+    grid-template-areas:". head ." "weapon body shield" "gloves boots accessory";}
+  .pslot{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    min-height:54px; background:rgba(8,12,28,.5); border:1px solid var(--line); border-radius:9px; cursor:pointer; padding:4px;}
+  .pslot.filled{border-color:var(--gold-line); background:rgba(40,55,110,.35);}
+  .pslot .pi{font-size:22px;} .pslot .pi.dim{opacity:.4;}
+  .pslot .pl{font-size:9px; color:var(--muted);} .pslot .pl.dim{color:var(--faint);}
+  .eq-stats{width:120px; background:rgba(8,12,28,.45); border:1px solid var(--line); border-radius:9px; padding:8px 10px;}
+  .eq-stats .strow{display:flex; justify-content:space-between; font-size:12px; color:var(--ink); padding:2px 0;}
+  .eq-stats .strow em{color:var(--gold); font-style:normal; font-size:11px;}
+  .eq-gold{text-align:center; color:var(--gold); font-size:13px;}
+  .eq-invtitle{text-align:center; color:var(--faint); font-size:11px;}
+  .inv-empty{text-align:center; color:var(--faint); font-size:13px; padding:20px;}
+  .invrow{display:flex; align-items:center; gap:10px; text-align:left;
+    background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:8px 11px; cursor:pointer; color:var(--ink);}
+  .invrow .iv-ic{font-size:22px;}
+  .invrow .iv-info{flex:1; font-size:13px; line-height:1.3;}
+  .invrow .iv-info .iv-sub{display:block; color:var(--muted); font-size:11px;}
+  .invrow .iv-act{font-size:12px; color:#1c1206; background:linear-gradient(180deg,#f0d28c,#d7a948); border-radius:7px; padding:6px 10px;}
+
   /* 가상 조이스틱 (떠다니는 방식 · 반투명) — 누른 자리에 생성 */
   #joyBase{position:absolute; z-index:10; width:148px; height:148px; border-radius:50%;
     transform:translate(-50%,-50%); pointer-events:none; touch-action:none;
@@ -256,6 +289,8 @@
     <button class="hud-back" data-a="back">타이틀 ›</button>
     <button class="hud-save" id="btnSave">💾 저장</button>
     <button class="hud-party" id="btnParty">👥 파티</button>
+    <button class="hud-bag" id="btnBag">🎒 장비</button>
+    <div class="hud-gold">🪙 <span id="goldVal">0</span></div>
     <div id="joyBase"><div id="joyKnob"></div></div>
     <button id="aBtn">A</button>
     <div id="dialog" class="hidden">
@@ -286,6 +321,25 @@
       <div class="sheet-title" id="slotTitle">저장</div>
       <div class="sheet-list" id="slotList"></div>
       <button class="sheet-close" id="slotClose">닫기</button>
+    </div>
+  </section>
+
+  <!-- ===== 장비 / 인벤토리 (디아블로식) ===== -->
+  <section class="screen hidden" id="scEquip">
+    <div class="sheet">
+      <div class="eq-head">
+        <button class="eq-arrow" id="eqPrev">‹</button>
+        <div class="eq-who"><span id="eqEmo"></span> <span id="eqName"></span></div>
+        <button class="eq-arrow" id="eqNext">›</button>
+      </div>
+      <div class="eq-top">
+        <div class="paperdoll" id="paperdoll"></div>
+        <div class="eq-stats" id="eqStats"></div>
+      </div>
+      <div class="eq-gold">🪙 골드 <span id="eqGold">0</span></div>
+      <div class="eq-invtitle">가방 — 장비를 탭해 장착 / 소모품 사용</div>
+      <div class="sheet-list" id="invList"></div>
+      <button class="sheet-close" id="eqClose">닫기</button>
     </div>
   </section>
 
@@ -402,7 +456,7 @@
     { c:12, r:11, type:"sign", solid:true, name:"표지판",
       lines:["▲ 북 — 옛 성터 / ▼ 남 — 마을<br>“길을 잃으면 별을 보라.”"] },
     { c:5,  r:15, type:"chest", solid:true, name:"보물상자",
-      opened:false, gold:120, item:"포션" },
+      opened:false, gold:120, loot:["sword","potion","potion"] },
   ];
   const objWX = (o) => o.c * TILE + TILE / 2;        // 중심 x
   const objFY = (o) => o.r * TILE + TILE;            // 발치 y(바닥선)
@@ -446,8 +500,12 @@
     player.face = (objWX(o) > player.x) ? 1 : -1;
     if (o.type === "chest"){
       if (o.opened){ openDialog(o.name, ["텅 비어 있다."]); return; }
-      o.opened = true; autosave();
-      openDialog(o.name, ["보물상자를 열었다!", `${o.item} 와(과) 골드 ${o.gold} 을(를) 얻었다.`]);
+      o.opened = true;
+      prog.gold += (o.gold || 0);
+      const names = (o.loot || []).map(id => { items[id] = (items[id]||0) + 1; return DB[id] ? DB[id].name : id; });
+      updateGold(); autosave();
+      const lootText = names.length ? names.join(", ") + " 와(과) " : "";
+      openDialog(o.name, ["보물상자를 열었다!", `${lootText}골드 ${o.gold} 을(를) 얻었다.`]);
     } else {
       openDialog(o.name, o.lines);
     }
@@ -632,10 +690,12 @@
   function resumeField(){      // 필드로 (전투/대화 후 이어서)
     show("scField");
     sizeCanvas();
+    updateGold();
     running = true; last = performance.now();
     cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
     autosave();           // 전투/이벤트 후 자동 저장
   }
+  function updateGold(){ const g = document.getElementById("goldVal"); if (g) g.textContent = prog.gold; }
   function stopField(){ running = false; cancelAnimationFrame(raf); clearInput(); }
   function clearInput(){ keys.up=keys.down=keys.left=keys.right=false; hideJoy(); }
 
@@ -646,7 +706,7 @@
     return {
       px: player.x, py: player.y, face: player.face, gold: prog.gold, items,
       roster: roster.map(h => ({ key:h.key, lv:h.lv, exp:h.exp, expNext:h.expNext, row:h.row,
-        maxHp:h.maxHp, maxMp:h.maxMp, atk:h.atk, def:h.def, mag:h.mag, spd:h.spd, hp:h.hp, mp:h.mp })),
+        maxHp:h.maxHp, maxMp:h.maxMp, atk:h.atk, def:h.def, mag:h.mag, spd:h.spd, hp:h.hp, mp:h.mp, equip:{...h.equip} })),
       chests: OBJS.map(o => o.type === "chest" ? !!o.opened : null),
     };
   }
@@ -694,6 +754,48 @@
     });
   }
   function slotsBack(){ if (_slotBack === "field") resumeField(); else { refreshTitle(); show("scTitle"); } }
+
+  /* ===== 장비 / 인벤토리 (디아블로식 장비창) ===== */
+  let _eqHero = 0;
+  function equipItem(h, id){ const it = DB[id]; if (!it || it.type === "consumable" || !items[id]) return;
+    const slot = it.type, cur = h.equip[slot];
+    items[id]--; if (items[id] <= 0) delete items[id];
+    if (cur){ items[cur] = (items[cur]||0) + 1; }
+    h.equip[slot] = id; clampHpMp(h); autosave(); }
+  function unequipSlot(h, slot){ const cur = h.equip[slot]; if (!cur) return; items[cur] = (items[cur]||0)+1; h.equip[slot] = null; clampHpMp(h); autosave(); }
+  function useItemField(h, id){ const it = DB[id]; if (!it || it.type !== "consumable" || !items[id]) return false;
+    if (it.heal) h.hp = Math.min(eStat(h,"maxHp"), h.hp + it.heal);
+    if (it.mp)   h.mp = Math.min(eStat(h,"maxMp"), h.mp + it.mp);
+    items[id]--; if (items[id] <= 0) delete items[id]; autosave(); return true; }
+  function openEquip(){ stopField(); _eqHero = 0; renderEquip(); show("scEquip"); }
+  function renderEquip(){
+    const h = roster[_eqHero];
+    document.getElementById("eqEmo").textContent = h.emoji;
+    document.getElementById("eqName").textContent = `${h.name}  Lv.${h.lv}`;
+    document.getElementById("eqGold").textContent = prog.gold;
+    const pd = document.getElementById("paperdoll"); pd.innerHTML = "";
+    EQ_SLOTS.forEach(slot => {
+      const id = h.equip[slot], it = id ? DB[id] : null;
+      const d = document.createElement("button"); d.className = "pslot" + (it ? " filled" : ""); d.style.gridArea = slot;
+      d.innerHTML = it ? `<span class="pi">${it.icon}</span><span class="pl">${it.name}</span>`
+                       : `<span class="pi dim">＋</span><span class="pl dim">${EQ_LABEL[slot]}</span>`;
+      d.onclick = () => { if (it){ unequipSlot(h, slot); renderEquip(); } };
+      pd.appendChild(d);
+    });
+    document.getElementById("eqStats").innerHTML = ["atk","def","mag","maxHp","maxMp","spd"].map(k => {
+      const base = h[k]||0, bon = eBonus(h,k);
+      return `<div class="strow"><span>${STAT_LABEL[k]}</span><span>${base+bon}${bon?` <em>(${bon>0?"+":""}${bon})</em>`:""}</span></div>`;
+    }).join("");
+    const list = document.getElementById("invList"); list.innerHTML = "";
+    const ids = Object.keys(items).filter(id => items[id] > 0 && DB[id]);
+    if (!ids.length){ list.innerHTML = `<div class="inv-empty">가방이 비어 있어요</div>`; return; }
+    ids.forEach(id => { const it = DB[id]; const row = document.createElement("button"); row.className = "invrow";
+      const sub = it.type === "consumable" ? it.desc : `${EQ_LABEL[it.type]} · ${bonusText(it)}`;
+      row.innerHTML = `<span class="iv-ic">${it.icon}</span><span class="iv-info"><b>${it.name}</b> ×${items[id]}<span class="iv-sub">${sub}</span></span><span class="iv-act">${it.type==="consumable"?"사용":"장착"}</span>`;
+      row.onclick = () => { if (it.type === "consumable"){ if (useItemField(h, id)) toast(`${it.name} 사용`); } else equipItem(h, id); renderEquip(); };
+      list.appendChild(row);
+    });
+  }
 
   /* ===== 파티 편성 (전열3·후열3·대기) ===== */
   function openParty(){ stopField(); renderParty(); show("scParty"); }
@@ -762,8 +864,12 @@
   $("#aBtn").addEventListener("click", () => pressA());
   document.getElementById("btnSave").addEventListener("click", () => openSlots("save","field"));
   document.getElementById("btnParty").addEventListener("click", () => openParty());
+  document.getElementById("btnBag").addEventListener("click", () => openEquip());
   document.getElementById("slotClose").addEventListener("click", () => slotsBack());
   document.getElementById("partyClose").addEventListener("click", () => resumeField());
+  document.getElementById("eqClose").addEventListener("click", () => resumeField());
+  document.getElementById("eqPrev").addEventListener("click", () => { _eqHero = (_eqHero - 1 + roster.length) % roster.length; renderEquip(); });
+  document.getElementById("eqNext").addEventListener("click", () => { _eqHero = (_eqHero + 1) % roster.length; renderEquip(); });
   // 대화창 어디든 탭하면 다음으로
   document.getElementById("dialog").addEventListener("pointerdown", e => { e.preventDefault(); advanceDialog(); });
   window.addEventListener("resize", () => { if (running) sizeCanvas(); });
@@ -805,11 +911,40 @@
   function mkHero(d){ return { key:d.key, name:d.name, emoji:d.emoji, sprites:d.sprites||null, g:d.g, row:d.row,
     abilities:d.abil.map(k=>({ ...AB[k] })), side:"hero", lv:1, exp:0, expNext:24,
     maxHp:d.base.maxHp, maxMp:d.base.maxMp, atk:d.base.atk, def:d.base.def, mag:d.base.mag, spd:d.base.spd,
-    hp:d.base.maxHp, mp:d.base.maxMp, defending:false, stun:false, el:null }; }
+    hp:d.base.maxHp, mp:d.base.maxMp, equip:{weapon:null,head:null,body:null,gloves:null,boots:null,shield:null,accessory:null},
+    defending:false, stun:false, el:null }; }
   function grow(h){ const g = h.g === "mag" ? {hp:5,mp:5,atk:1,def:1,mag:3,spd:1} : {hp:9,mp:2,atk:2,def:1,mag:1,spd:1};
-    h.maxHp+=g.hp; h.maxMp+=g.mp; h.atk+=g.atk; h.def+=g.def; h.mag+=g.mag; h.spd+=g.spd; h.hp=h.maxHp; h.mp=h.maxMp; }
+    h.maxHp+=g.hp; h.maxMp+=g.mp; h.atk+=g.atk; h.def+=g.def; h.mag+=g.mag; h.spd+=g.spd; h.hp=eStat(h,"maxHp"); h.mp=eStat(h,"maxMp"); }
   function gainExp(h, amt){ h.exp += amt; let up = false;
     while (h.exp >= h.expNext){ h.exp -= h.expNext; h.lv++; h.expNext = Math.round(h.expNext*1.5); grow(h); up = true; } return up; }
+
+  // ===== 장비 / 아이템 카탈로그 =====
+  const EQ_SLOTS = ["weapon","head","body","gloves","boots","shield","accessory"];
+  const EQ_LABEL = { weapon:"무기", head:"머리", body:"몸", gloves:"장갑", boots:"신발", shield:"방패", accessory:"악세서리" };
+  const STAT_LABEL = { atk:"공격", def:"방어", mag:"마력", maxHp:"HP", maxMp:"MP", spd:"속도" };
+  const DB = {
+    potion:  { name:"포션",     type:"consumable", icon:"🧪", heal:50,  price:30,  desc:"HP 50 회복" },
+    hipotion:{ name:"하이포션", type:"consumable", icon:"🍶", heal:150, price:90,  desc:"HP 150 회복" },
+    ether:   { name:"에테르",   type:"consumable", icon:"💧", mp:25,   price:60,  desc:"MP 25 회복" },
+    sword:   { name:"강철검",   type:"weapon", icon:"⚔️", bonus:{atk:6},          price:120, desc:"공격 +6" },
+    greatsword:{ name:"대검",   type:"weapon", icon:"🗡️", bonus:{atk:11,spd:-1},  price:300, desc:"공격 +11, 속도 -1" },
+    staff:   { name:"마법지팡이", type:"weapon", icon:"🪄", bonus:{mag:8},         price:160, desc:"마력 +8" },
+    bow:     { name:"장궁",     type:"weapon", icon:"🏹", bonus:{atk:5,spd:2},    price:180, desc:"공격 +5, 속도 +2" },
+    helm:    { name:"투구",     type:"head",   icon:"🪖", bonus:{def:3,maxHp:10}, price:90,  desc:"방어 +3, HP +10" },
+    cap:     { name:"마법사 모자", type:"head", icon:"🎩", bonus:{mag:4,maxMp:8}, price:90,  desc:"마력 +4, MP +8" },
+    plate:   { name:"판금갑옷", type:"body",   icon:"🛡", bonus:{def:7,maxHp:20}, price:220, desc:"방어 +7, HP +20" },
+    robe:    { name:"마도 로브", type:"body",  icon:"🧥", bonus:{def:3,mag:5,maxMp:10}, price:200, desc:"방어 +3, 마력 +5, MP +10" },
+    gloves:  { name:"건틀릿",   type:"gloves", icon:"🧤", bonus:{atk:2,def:2},    price:80,  desc:"공격 +2, 방어 +2" },
+    boots:   { name:"강철 군화", type:"boots", icon:"🥾", bonus:{def:2,spd:2},    price:80,  desc:"방어 +2, 속도 +2" },
+    shield:  { name:"강철 방패", type:"shield", icon:"🛡️", bonus:{def:6},         price:150, desc:"방어 +6" },
+    ring:    { name:"힘의 반지", type:"accessory", icon:"💍", bonus:{atk:3,maxHp:8}, price:140, desc:"공격 +3, HP +8" },
+    amulet:  { name:"수호 부적", type:"accessory", icon:"📿", bonus:{def:3,maxMp:10}, price:140, desc:"방어 +3, MP +10" },
+  };
+  const bonusText = it => it.bonus ? Object.keys(it.bonus).map(k => `${STAT_LABEL[k]} ${it.bonus[k]>0?"+":""}${it.bonus[k]}`).join(", ") : (it.desc||"");
+  function eBonus(h, key){ let s = 0; if (h.equip) for (const sl of EQ_SLOTS){ const id = h.equip[sl]; if (id && DB[id] && DB[id].bonus && DB[id].bonus[key]) s += DB[id].bonus[key]; } return s; }
+  function eStat(h, key){ return (h[key] || 0) + eBonus(h, key); }
+  function clampHpMp(h){ h.hp = Math.min(h.hp, eStat(h,"maxHp")); h.mp = Math.min(h.mp, eStat(h,"maxMp")); }
+  const DEFAULT_INV = () => ({ potion:5, hipotion:1, ether:2, sword:1, staff:1, helm:1, plate:1, shield:1, gloves:1, boots:1, ring:1 });
 
   const ENEMY_DEF = [
     { name:"슬라임", emoji:"🟢", maxHp:34, atk:11, def:3, spd:7,  exp:6,  gold:5  },
@@ -817,8 +952,8 @@
     { name:"박쥐",   emoji:"🦇", maxHp:26, atk:13, def:2, spd:15, exp:8,  gold:6  },
     { name:"늑대",   emoji:"🐺", maxHp:44, atk:17, def:4, spd:13, exp:13, gold:10 },
   ];
-  let roster = [], party = [], enemies = [], items = { "포션":3, "에테르":1 };
-  let prog = { gold:0 };
+  let roster = [], party = [], enemies = [], items = DEFAULT_INV();
+  let prog = { gold:120 };
   let B = null, _enc = 0, _encNext = TILE * 5;
 
   const battleParty = () => roster.filter(h => h.row !== "reserve");
@@ -827,8 +962,8 @@
     player.x = START.x; player.y = START.y; player.face = 1;
     roster = ROSTER_DEF.map(mkHero);
     party = [];
-    items = { "포션":3, "에테르":1 };
-    prog = { gold:0 };
+    items = DEFAULT_INV();
+    prog = { gold:120 };
     OBJS.forEach(o => { if (o.type === "chest") o.opened = false; });
     _enc = 0; _encNext = TILE * 5;
   }
@@ -856,8 +991,8 @@
     party.forEach(h => { h.el = mkBattler(h); (h.row === "back" ? bk : fr).appendChild(h.el); updateBattler(h); });
   }
   function updateBattler(b){ if (!b.el) return;
-    b.el.querySelector(".bhp>i").style.width = Math.max(0, b.hp/b.maxHp*100) + "%";
-    if (b.side === "hero"){ const m = b.el.querySelector(".bmp>i"); if (m) m.style.width = Math.max(0, b.mp/b.maxMp*100) + "%"; } }
+    b.el.querySelector(".bhp>i").style.width = Math.max(0, b.hp/eStat(b,"maxHp")*100) + "%";
+    if (b.side === "hero"){ const m = b.el.querySelector(".bmp>i"); if (m) m.style.width = Math.max(0, b.mp/eStat(b,"maxMp")*100) + "%"; } }
   const setActive = (b,on) => b.el && b.el.classList.toggle("active", on);
 
   // ---- effects ----
@@ -870,14 +1005,14 @@
   function stunOff(b){ const s = b.el.querySelector(".stun"); if (s) s.remove(); }
   async function die(b){ b.el.classList.add("dead"); setLog((b.label||b.name) + " 쓰러졌다!"); await delay(620); }
 
-  const physDmg = (a, t, p) => Math.max(1, Math.round((a.atk*p*1.4 - t.def*0.8) * rnd(.9,1.1)));
-  const magDmg  = (a, t, p) => Math.max(1, Math.round((a.mag*2.0*p - t.def*0.3) * rnd(.9,1.1)));
+  const physDmg = (a, t, p) => Math.max(1, Math.round((eStat(a,"atk")*p*1.4 - eStat(t,"def")*0.8) * rnd(.9,1.1)));
+  const magDmg  = (a, t, p) => Math.max(1, Math.round((eStat(a,"mag")*2.0*p - eStat(t,"def")*0.3) * rnd(.9,1.1)));
 
   // 단일 대상 행동(물리/마법/회복)
   async function act(att, tgt, opt){
     if (opt.kind === "heal"){
       att.el.classList.add("cast"); heroPose(att, "casting"); await delay(280);
-      const h = Math.round(att.mag*2.4*opt.power); tgt.hp = Math.min(tgt.maxHp, tgt.hp + h);
+      const h = Math.round(eStat(att,"mag")*2.4*opt.power); tgt.hp = Math.min(eStat(tgt,"maxHp"), tgt.hp + h);
       sparkAt(tgt, opt.emo||"✨"); popNum(tgt, "+"+h, "heal"); updateBattler(tgt);
       await delay(420); att.el.classList.remove("cast"); restPose(att); return;
     }
@@ -934,7 +1069,9 @@
       ]);
       const abil = () => { const l = h.abilities.map(ab => ({ l:`${ab.name}${ab.mp?` ${ab.mp}`:""}`, sub:true, dis:h.mp<ab.mp, f:()=>res({k:"abil", ab}) }));
         l.push({ l:"‹ 뒤로", sub:true, f:main }); return l; };
-      const itm = () => { const l = Object.keys(items).map(k => ({ l:`${k}×${items[k]}`, sub:true, dis:items[k]<=0, f:()=>res({k:"item", item:k}) }));
+      const itm = () => { const l = Object.keys(items).filter(k => DB[k] && DB[k].type==="consumable" && items[k]>0)
+          .map(k => ({ l:`${DB[k].icon}${DB[k].name}×${items[k]}`, sub:true, f:()=>res({k:"item", item:k}) }));
+        if (!l.length) l.push({ l:"(소모품 없음)", sub:true, dis:true, f:()=>{} });
         l.push({ l:"‹ 뒤로", sub:true, f:main }); return l; };
       main();
     });
@@ -953,11 +1090,12 @@
         const t = await pickTarget(ab.target === "ally" ? "hero" : "enemy"); if (!t) continue;
         clearMenu(); h.mp -= ab.mp; updateBattler(h); setLog(`${h.name} — ${ab.name}!`);
         await act(h, t, { power:ab.power, kind:ab.kind, emo:ab.emo }); break; }
-      if (c.k === "item"){ const k = c.item; if (items[k] <= 0) continue;
-        const t = await pickTarget("hero"); if (!t) continue; clearMenu(); items[k]--;
-        if (k === "포션"){ t.hp = Math.min(t.maxHp, t.hp + 50); popNum(t, "+50", "heal"); }
-        else { t.mp = Math.min(t.maxMp, t.mp + 20); popNum(t, "+20", "heal"); }
-        sparkAt(t, "🧪"); updateBattler(t); setLog(`${k}을(를) 사용했다.`); await delay(700); break; }
+      if (c.k === "item"){ const k = c.item; if (!items[k]) continue; const it = DB[k];
+        const t = await pickTarget("hero"); if (!t) continue; clearMenu();
+        items[k]--; if (items[k] <= 0) delete items[k];
+        if (it.heal){ t.hp = Math.min(eStat(t,"maxHp"), t.hp + it.heal); popNum(t, "+"+it.heal, "heal"); }
+        if (it.mp){ t.mp = Math.min(eStat(t,"maxMp"), t.mp + it.mp); popNum(t, "+"+it.mp, "heal"); }
+        sparkAt(t, it.icon); updateBattler(t); setLog(`${it.name} 사용!`); await delay(700); break; }
     }
     setActive(h, false);
   }
@@ -970,7 +1108,7 @@
 
   async function battleLoop(){
     while (true){
-      const order = [...aliveH(), ...aliveE()].sort((a,b) => b.spd - a.spd);
+      const order = [...aliveH(), ...aliveE()].sort((a,b) => eStat(b,"spd") - eStat(a,"spd"));
       for (const a of order){
         if (a.hp <= 0) continue;
         if (!aliveE().length) return victory();
