@@ -85,7 +85,40 @@
   #toast{position:absolute; bottom:64px; left:50%; transform:translateX(-50%);
     background:rgba(12,20,46,.96); border:1px solid var(--gold-line); color:var(--ink);
     padding:10px 18px; border-radius:10px; font-size:13px; opacity:0;
-    transition:opacity .25s ease; pointer-events:none; max-width:86%;}
+    transition:opacity .25s ease; pointer-events:none; max-width:86%; z-index:30;}
+
+  /* ===== 필드(탐험) 화면 ===== */
+  #scField{padding:0; gap:0; justify-content:flex-start;}
+  #fieldCanvas{position:absolute; inset:0; width:100%; height:100%; display:block;
+    image-rendering:auto; touch-action:none;}
+  /* 상단 위치 패널 */
+  .hud{position:absolute; top:14px; left:14px; z-index:10;
+    background:var(--panel); border:1px solid var(--gold-line); border-radius:9px;
+    padding:7px 13px; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);}
+  .hud .kick{font-size:9px; letter-spacing:.2em; color:var(--gold-dim);}
+  .hud .loc{font-family:var(--serif); font-size:14px; color:var(--gold); letter-spacing:.04em;}
+  .hud-back{position:absolute; top:14px; right:14px; z-index:10;
+    background:var(--panel); border:1px solid var(--gold-line); color:var(--gold);
+    font-size:13px; padding:7px 12px; border-radius:9px; cursor:pointer;}
+
+  /* D패드 */
+  #dpad{position:absolute; left:18px; bottom:26px; z-index:10;
+    width:152px; height:152px; touch-action:none; user-select:none;}
+  .dbtn{position:absolute; width:50px; height:50px; display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:var(--gold); background:var(--panel); border:1px solid var(--gold-line);
+    border-radius:11px; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); cursor:pointer;}
+  .dbtn:active{background:rgba(230,192,116,.22);}
+  .dbtn.up{left:51px; top:0;} .dbtn.down{left:51px; bottom:0;}
+  .dbtn.left{left:0; top:51px;} .dbtn.right{right:0; top:51px;}
+  #dpad .hub{position:absolute; left:51px; top:51px; width:50px; height:50px;
+    border:1px solid var(--line); border-radius:11px; opacity:.4;}
+
+  /* A버튼(확인) */
+  #aBtn{position:absolute; right:26px; bottom:42px; z-index:10;
+    width:62px; height:62px; border-radius:50%; font-family:var(--serif); font-weight:700;
+    color:#1c1206; background:linear-gradient(180deg,#f0d28c,#d7a948); border:1px solid #f5dca0;
+    font-size:20px; cursor:pointer;}
+  #aBtn:active{transform:scale(.96);}
 </style>
 </head>
 <body>
@@ -107,6 +140,21 @@
       <button class="item" data-a="settings">설정</button>
     </div>
     <div class="foot">© 2026 · DESTINY CRUSADER · Ver 0.1</div>
+  </section>
+
+  <!-- ===== 필드(탐험) 화면 ===== -->
+  <section class="screen hidden" id="scField">
+    <canvas id="fieldCanvas"></canvas>
+    <div class="hud"><div class="kick">NORTHERN WOODS</div><div class="loc">북부 숲길</div></div>
+    <button class="hud-back" data-a="back">타이틀 ›</button>
+    <div id="dpad">
+      <div class="dbtn up"    data-dir="up">▲</div>
+      <div class="dbtn down"  data-dir="down">▼</div>
+      <div class="dbtn left"  data-dir="left">◀</div>
+      <div class="dbtn right" data-dir="right">▶</div>
+      <div class="hub"></div>
+    </div>
+    <button id="aBtn">A</button>
   </section>
 
   <!-- ===== 임시(다음 단계) 화면 ===== -->
@@ -145,13 +193,169 @@
   // 타이틀 메뉴
   $$("#scTitle .item").forEach(btn => btn.addEventListener("click", () => {
     const a = btn.dataset.a;
-    if (a === "new")       openPlaceholder("새 게임", "모험의 시작 화면을 다음 단계에서 만듭니다.<br>(캐릭터 · 필드 · 전투…)");
+    if (a === "new")       startField();
     else if (a === "cont") toast("저장된 모험이 아직 없어요");
     else if (a === "settings") openPlaceholder("설정", "사운드 · 언어 등 설정을 다음 단계에서 추가합니다.");
   }));
 
   // 뒤로
-  $$('[data-a="back"]').forEach(b => b.addEventListener("click", () => show("scTitle")));
+  $$('[data-a="back"]').forEach(b => b.addEventListener("click", () => { stopField(); show("scTitle"); }));
+
+  /* =========================================================================
+     STEP 2 — 필드(탐험): 타일 맵 · 이동 · 충돌 · 카메라
+     ========================================================================= */
+  // 0 풀, 1 나무(막힘), 2 물(막힘), 3 길, 4 꽃
+  const MAP = [
+    "1111111111111111",
+    "1000000000000001",
+    "1000011000000001",
+    "1000011000033001",
+    "1004000000033001",
+    "1000000000033001",
+    "1000000220033001",
+    "1000002220033001",
+    "1000002200033001",
+    "1000000000033001",
+    "1003333333333001",
+    "1003000000000001",
+    "1003000110000041",
+    "1003000110000001",
+    "1003000000000001",
+    "1003000000044001",
+    "1003000000044001",
+    "1000000000000001",
+    "1000011000001101",
+    "1000011000001101",
+    "1000000000000001",
+    "1111111111111111",
+  ].map(r => r.split("").map(Number));
+  const ROWS = MAP.length, COLS = MAP[0].length, TILE = 40;
+  const WALK = new Set([0, 3, 4]);
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+  const cv = $("#fieldCanvas");
+  const cx = cv.getContext("2d");
+  let VW = 0, VH = 0, dpr = 1;
+  function sizeCanvas(){
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    VW = cv.clientWidth; VH = cv.clientHeight;
+    cv.width = Math.round(VW * dpr); cv.height = Math.round(VH * dpr);
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // 플레이어 (월드 좌표 px)
+  const player = { x: 8 * TILE + TILE / 2, y: 4 * TILE + TILE / 2, face: 1 };
+  const held = { up:false, down:false, left:false, right:false };
+  const cam = { x: 0, y: 0 };
+
+  function tileWalk(px, py){
+    const c = Math.floor(px / TILE), r = Math.floor(py / TILE);
+    return r >= 0 && r < ROWS && c >= 0 && c < COLS && WALK.has(MAP[r][c]);
+  }
+
+  let raf = 0, last = 0, running = false, t = 0;
+  function loop(ts){
+    if (!running) return;
+    const dt = Math.min(40, ts - last || 16); last = ts; t = ts;
+
+    // 이동
+    let vx = (held.right?1:0) - (held.left?1:0);
+    let vy = (held.down?1:0) - (held.up?1:0);
+    if (vx || vy){
+      if (vx && vy){ vx *= .707; vy *= .707; }
+      if (vx) player.face = vx > 0 ? 1 : -1;
+      const sp = TILE * 0.05 * (dt / 16);
+      const nx = player.x + vx * sp;
+      if (tileWalk(nx + (vx>0?TILE*0.28:vx<0?-TILE*0.28:0), player.y + TILE*0.30)) player.x = nx;
+      const ny = player.y + vy * sp;
+      if (tileWalk(player.x, ny + (vy>0?TILE*0.34:-TILE*0.10))) player.y = ny;
+    }
+
+    // 카메라 (플레이어 중심, 맵 경계 클램프)
+    const worldW = COLS*TILE, worldH = ROWS*TILE;
+    cam.x = worldW <= VW ? (worldW-VW)/2 : clamp(player.x - VW/2, 0, worldW-VW);
+    cam.y = worldH <= VH ? (worldH-VH)/2 : clamp(player.y - VH*0.46, 0, worldH-VH);
+
+    draw();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function draw(){
+    cx.clearRect(0, 0, VW, VH);
+    cx.fillStyle = "#0d1a14"; cx.fillRect(0, 0, VW, VH);
+    const c0 = Math.max(0, Math.floor(cam.x/TILE)), c1 = Math.min(COLS-1, Math.ceil((cam.x+VW)/TILE));
+    const r0 = Math.max(0, Math.floor(cam.y/TILE)), r1 = Math.min(ROWS-1, Math.ceil((cam.y+VH)/TILE));
+    // 바닥 타일
+    for (let r=r0; r<=r1; r++) for (let c=c0; c<=c1; c++){
+      const tile = MAP[r][c], x = c*TILE-cam.x, y = r*TILE-cam.y;
+      if (tile === 2){ cx.fillStyle = "#1d4e8c"; cx.fillRect(x,y,TILE,TILE);
+        cx.fillStyle = "rgba(190,225,240,.12)"; cx.fillRect(x+4, y+TILE*0.4+Math.sin(t*0.003+c)*2, TILE-8, 1); }
+      else if (tile === 3){ cx.fillStyle = "#7a6243"; cx.fillRect(x,y,TILE,TILE); }
+      else { cx.fillStyle = ((r+c)&1) ? "#2f5a32" : "#346134"; cx.fillRect(x,y,TILE,TILE); }
+      if (tile === 4){ cx.fillStyle = "#e6c074"; cx.beginPath(); cx.arc(x+TILE*0.5, y+TILE*0.5, 3, 0, 7); cx.fill();
+        cx.fillStyle = "#d97fae"; cx.beginPath(); cx.arc(x+TILE*0.32, y+TILE*0.62, 2.4, 0, 7); cx.fill(); }
+    }
+    // 나무(오브젝트, 깊이감)
+    for (let r=r0; r<=r1+1; r++) for (let c=c0; c<=c1; c++){
+      if (r<0||r>=ROWS||MAP[r][c]!==1) continue;
+      drawTree(c*TILE+TILE/2-cam.x, r*TILE+TILE-cam.y);
+    }
+    drawPlayer(player.x-cam.x, player.y-cam.y);
+    // 가장자리 어둡게
+    const g = cx.createLinearGradient(0,0,0,VH);
+    g.addColorStop(0,"rgba(8,12,28,.45)"); g.addColorStop(.2,"rgba(0,0,0,0)");
+    g.addColorStop(.82,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(5,8,20,.5)");
+    cx.fillStyle = g; cx.fillRect(0,0,VW,VH);
+  }
+
+  function drawTree(sx, sy){
+    cx.fillStyle = "rgba(0,0,0,.25)"; cx.beginPath(); cx.ellipse(sx, sy-3, TILE*0.32, TILE*0.12, 0, 0, 7); cx.fill();
+    cx.fillStyle = "#4a3420"; cx.fillRect(sx-3, sy-TILE*0.7, 6, TILE*0.7);
+    cx.fillStyle = "#244625"; cx.beginPath(); cx.arc(sx, sy-TILE*0.95, TILE*0.5, 0, 7); cx.fill();
+    cx.fillStyle = "#356134"; cx.beginPath(); cx.arc(sx-5, sy-TILE*1.05, TILE*0.38, 0, 7); cx.fill();
+    cx.fillStyle = "#4d8a4f"; cx.beginPath(); cx.arc(sx-TILE*0.18, sy-TILE*1.2, TILE*0.2, 0, 7); cx.fill();
+  }
+
+  function drawPlayer(sx, sy){
+    const bob = (held.up||held.down||held.left||held.right) ? 0 : Math.sin(t*0.005)*1.2;
+    sy += bob;
+    cx.fillStyle = "rgba(0,0,0,.3)"; cx.beginPath(); cx.ellipse(sx, sy, TILE*0.24, TILE*0.1, 0, 0, 7); cx.fill();
+    cx.save(); cx.translate(sx, sy); cx.scale(player.face, 1);
+    // 망토/튜닉 (십자군 느낌)
+    cx.fillStyle = "#c9d2e6"; cx.beginPath();
+    cx.moveTo(-9, -10); cx.lineTo(9, -10); cx.lineTo(7, -2); cx.lineTo(-7, -2); cx.closePath(); cx.fill();
+    cx.fillStyle = "#e8eefc"; cx.fillRect(-7, -24, 14, 16);          // 몸통(흰 튜닉)
+    cx.fillStyle = "#c0392b"; cx.fillRect(-1.5, -22, 3, 11);          // 세로 십자
+    cx.fillStyle = "#c0392b"; cx.fillRect(-5, -18, 14, 3);            // 가로 십자
+    cx.fillStyle = "#f0c9a0"; cx.beginPath(); cx.arc(0, -28, 5, 0, 7); cx.fill(); // 머리
+    cx.fillStyle = "#d7a948"; cx.fillRect(-5, -33, 10, 4);           // 금색 투구띠
+    cx.restore();
+  }
+
+  function startField(){
+    show("scField");
+    sizeCanvas();
+    running = true; last = performance.now();
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+  }
+  function stopField(){ running = false; cancelAnimationFrame(raf); clearHeld(); }
+  function clearHeld(){ held.up=held.down=held.left=held.right=false; }
+
+  // D패드 입력
+  $$("#dpad .dbtn[data-dir]").forEach(b => {
+    const on  = e => { e.preventDefault(); held[b.dataset.dir] = true; };
+    const off = e => { e.preventDefault(); held[b.dataset.dir] = false; };
+    b.addEventListener("pointerdown", on);
+    b.addEventListener("pointerup", off);
+    b.addEventListener("pointerleave", off);
+    b.addEventListener("pointercancel", off);
+  });
+  document.addEventListener("pointerup", () => { if (running) clearHeld(); });
+  const KEY = { ArrowUp:"up", ArrowDown:"down", ArrowLeft:"left", ArrowRight:"right", w:"up", s:"down", a:"left", d:"right" };
+  document.addEventListener("keydown", e => { if (running && KEY[e.key]){ e.preventDefault(); held[KEY[e.key]] = true; } });
+  document.addEventListener("keyup",   e => { if (KEY[e.key]) held[KEY[e.key]] = false; });
+  $("#aBtn").addEventListener("click", () => toast("‘A’ — 상호작용/전투는 다음 단계에서!"));
+  window.addEventListener("resize", () => { if (running) sizeCanvas(); });
 
   show("scTitle");
 </script>
