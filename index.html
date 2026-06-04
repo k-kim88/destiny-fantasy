@@ -332,6 +332,7 @@
   .battler.boss .bhp{visibility:hidden;}
   .battler.boss.revealed .bhp{visibility:visible;}
   .bosslabel{font-size:11px; color:#ff8a7a; margin-top:2px; font-family:var(--serif); letter-spacing:.05em;}
+  .battler .bst{font-size:12px; line-height:1; min-height:0; margin-top:1px;}
   /* FF식 메시지 배너 */
   .bt-log{width:100%; padding:9px 16px; min-height:40px; color:#eef4ff; font-size:13.5px; line-height:1.4; text-align:center;
     background:linear-gradient(180deg,rgba(18,28,64,.96),rgba(10,16,40,.96)); border-top:1px solid var(--gold-line);}
@@ -711,6 +712,8 @@
       lines:["무기와 물약, 필요한 게 있나? 천천히 둘러보게."] },
     { c:8,  r:18, type:"boss", solid:true, name:"고대 수호기사",
       lines:["…침입자여. 이 숲은 내가 지킨다.", "돌아갈 생각이라면 지금이다. ……아니라면, 각오해라!"] },
+    { c:8,  r:10, type:"spring", solid:true, name:"회복의 샘물" },
+    { c:11, r:17, type:"spring", solid:true, name:"회복의 샘물" },
   ];
   const objWX = (o) => o.c * TILE + TILE / 2;        // 중심 x
   const objFY = (o) => o.r * TILE + TILE;            // 발치 y(바닥선)
@@ -765,6 +768,10 @@
     } else if (o.type === "boss"){
       if (prog.bossDefeated){ openDialog(o.name, ["…더 이상 싸울 이유는 없다."]); return; }
       openDialog(o.name, o.lines, () => startBoss(o));
+    } else if (o.type === "spring"){
+      roster.forEach(t => { t.hp = eStat(t,"maxHp"); t.mp = eStat(t,"maxMp"); cureAll(t); });
+      SFX.heal(); autosave();
+      openDialog(o.name, ["맑은 샘물이 솟아오른다…", "파티의 HP와 MP가 모두 회복되고 상태이상이 치료되었다!"]);
     } else {
       openDialog(o.name, o.lines);
     }
@@ -883,7 +890,15 @@
     else if (o.type === "sign") drawSign(sx, sy);
     else if (o.type === "chest") drawChest(sx, sy, o.opened);
     else if (o.type === "shop") drawEmoObj(sx, sy, "🛒", TILE*0.2);
+    else if (o.type === "spring") drawSpring(sx, sy);
     else if (o.type === "boss") drawEmoObj(sx, sy, (prog.bossDefeated ? "🪦" : "🐲"), TILE*0.28, !prog.bossDefeated);
+  }
+  function drawSpring(sx, sy){
+    const p = 0.5 + 0.5*Math.sin(t*0.004);
+    cx.fillStyle = `rgba(110,200,240,${0.18+0.22*p})`; cx.beginPath(); cx.arc(sx, sy-TILE*0.45, TILE*0.5, 0, 7); cx.fill();
+    cx.fillStyle = "rgba(0,0,0,.22)"; cx.beginPath(); cx.ellipse(sx, sy-2, TILE*0.3, TILE*0.12, 0, 0, 7); cx.fill();
+    cx.font = `${Math.round(TILE*0.9)}px serif`; cx.textAlign = "center"; cx.textBaseline = "alphabetic";
+    cx.fillText("⛲", sx, sy); cx.textAlign = "left";
   }
   function drawEmoObj(sx, sy, emo, sh, glow){
     shadow(sx, sy, sh);
@@ -974,7 +989,7 @@
     return {
       px: player.x, py: player.y, face: player.face, gold: prog.gold, boss: !!prog.bossDefeated, items,
       roster: roster.map(h => ({ key:h.key, lv:h.lv, exp:h.exp, expNext:h.expNext, row:h.row,
-        maxHp:h.maxHp, maxMp:h.maxMp, atk:h.atk, def:h.def, mag:h.mag, spd:h.spd, hp:h.hp, mp:h.mp, equip:{...h.equip} })),
+        maxHp:h.maxHp, maxMp:h.maxMp, atk:h.atk, def:h.def, mag:h.mag, spd:h.spd, hp:h.hp, mp:h.mp, equip:{...h.equip}, st:{...h.st} })),
       chests: OBJS.map(o => o.type === "chest" ? !!o.opened : null),
     };
   }
@@ -1046,7 +1061,7 @@
     const mp = document.getElementById("menuParty"); mp.innerHTML = "";
     roster.forEach((h, i) => { const d = document.createElement("button"); d.className = "mp-row r-" + h.row;
       d.innerHTML = `<span class="eq-portrait mini"><span class="pf-emo">${h.emoji}</span></span>
-        <span class="mp-info"><b>${h.name}</b> <span class="mp-job">${JOBS[h.key]||""}</span> <span class="mp-badge">${ROW_BADGE[h.row]}</span>
+        <span class="mp-info"><b>${h.name}</b> <span class="mp-job">${JOBS[h.key]||""}</span> ${stIcons(h)} <span class="mp-badge">${ROW_BADGE[h.row]}</span>
           <span class="mp-line">Lv.${h.lv}　HP ${h.hp}/${eStat(h,"maxHp")}　MP ${h.mp}/${eStat(h,"maxMp")}</span>
           <span class="mp-bars"><i class="hp" style="width:${h.hp/eStat(h,"maxHp")*100}%"></i></span></span>`;
       d.onclick = () => { _stHero = i; openStatus(); };   // 멤버 탭하면 스테이터스로
@@ -1065,7 +1080,7 @@
        <div class="st-ex">EXP ${h.exp} / ${h.expNext}</div>
        <div class="st-bar"><i style="width:${h.exp/h.expNext*100}%"></i></div>
        <div class="st-hp">HP ${h.hp} / ${eStat(h,"maxHp")}　MP ${h.mp} / ${eStat(h,"maxMp")}</div>
-       <div class="st-row2">${h.row==="reserve"?"대기":h.row==="front"?"전열":"후열"}</div>`;
+       <div class="st-row2">${h.row==="reserve"?"대기":h.row==="front"?"전열":"후열"}${stIcons(h)?` · 상태 ${stIcons(h)}`:""}</div>`;
     document.getElementById("stStats").innerHTML = ["atk","def","mag","spd"].map(k => {
       const bon = eBonus(h,k); return `<div class="strow"><span>${STAT_LABEL[k]}</span><span>${eStat(h,k)}${bon?` <em>(${bon>0?"+":""}${bon})</em>`:""}</span></div>`;
     }).join("");
@@ -1097,8 +1112,8 @@
     hint.textContent = "필드에서는 회복 마법만 사용할 수 있어요";
     if (!h.abilities.length){ list.innerHTML = `<div class="inv-empty">배운 마법·스킬이 없어요</div>`; return; }
     h.abilities.forEach(ab => {
-      const isFieldHeal = ab.kind === "heal" || (ab.kind === "summon" && ab.target === "allAllies");
-      const typeLabel = ab.kind === "summon" ? "소환" : ab.kind === "heal" ? "회복" : ab.kind === "mag" ? "마법" : "스킬";
+      const isFieldHeal = ab.kind === "heal" || ab.kind === "cure" || (ab.kind === "summon" && ab.target === "allAllies");
+      const typeLabel = ab.kind === "summon" ? "소환" : ab.kind === "heal" ? "회복" : ab.kind === "cure" ? "치료" : ab.kind === "mag" ? "마법" : "스킬";
       const can = isFieldHeal && h.mp >= ab.mp;
       const act = isFieldHeal ? (h.mp >= ab.mp ? "사용" : "MP부족") : "전투 전용";
       const row = document.createElement("button"); row.className = "invrow";
@@ -1112,9 +1127,10 @@
     if (caster.mp < ab.mp){ toast("MP가 부족해요"); return; }
     caster.mp -= ab.mp;
     const targets = ab.target === "allAllies" ? roster : [target];
-    targets.forEach(t => { t.hp = Math.min(eStat(t,"maxHp"), t.hp + Math.round(eStat(caster,"mag")*2.4*ab.power)); });
+    if (ab.kind === "cure"){ targets.forEach(cureAll); toast(`${ab.name} — 상태이상 치료!`); }
+    else { targets.forEach(t => { t.hp = Math.min(eStat(t,"maxHp"), t.hp + Math.round(eStat(caster,"mag")*2.4*ab.power)); });
+      toast(ab.target === "allAllies" ? `${ab.name} — 파티 전체 회복!` : `${target.name} 회복!`); }
     SFX.heal(); autosave();
-    toast(ab.target === "allAllies" ? `${ab.name} — 파티 전체 회복!` : `${target.name} 회복!`);
     _skCast = null; renderSkill();
   }
 
@@ -1144,6 +1160,7 @@
     const it = DB[id]; if (!items[id]) return;
     if (it.heal) target.hp = Math.min(eStat(target,"maxHp"), target.hp + it.heal);
     if (it.mp)   target.mp = Math.min(eStat(target,"maxMp"), target.mp + it.mp);
+    if (it.cure) it.cure.forEach(s => { if (target.st) delete target.st[s]; });
     items[id]--; if (items[id] <= 0) delete items[id];
     SFX.item(); autosave();
     toast(`${it.name} — ${target.name}`);
@@ -1216,7 +1233,13 @@
   }
 
   /* ===== 상점 (구매 / 판매) ===== */
-  const SHOP_STOCK = ["potion","hipotion","ether","sword","greatsword","staff","bow","helm","cap","plate","robe","gloves","boots","shield","ring","amulet"];
+  const SHOP_STOCK = ["potion","hipotion","ether","antidote","remedy","sword","greatsword","staff","bow","helm","cap","plate","robe","gloves","boots","shield","ring","amulet"];
+  // 상태이상 정의
+  const STATUS = { poison:{name:"독",icon:"🟣"}, paralyze:{name:"마비",icon:"⚡"}, silence:{name:"침묵",icon:"🤐"}, sleep:{name:"수면",icon:"💤"} };
+  function addStatus(b, key, turns){ if (!b.st) b.st = {}; b.st[key] = Math.max(b.st[key]||0, turns); }
+  function curePoison(b){ if (b.st) delete b.st.poison; }
+  function cureAll(b){ b.st = {}; }
+  function stIcons(b){ return b.st ? Object.keys(b.st).filter(k=>b.st[k]>0).map(k=>STATUS[k].icon).join("") : ""; }
   let _shopTab = "buy";
   function openShop(){ _shopTab = "buy"; renderShop(); show("scShop"); }
   const sellPrice = it => Math.floor((it.price||0) * 0.5);
@@ -1348,6 +1371,7 @@
     fire: {name:"파이어", mp:6,  kind:"mag",  power:1.0, target:"enemy",     emo:"🔥"},
     bolt: {name:"라이트닝", mp:14, kind:"mag",  power:0.8, target:"allEnemies", emo:"⚡"},
     heal: {name:"힐",     mp:8,  kind:"heal", power:1.0, target:"ally",      emo:"✨"},
+    cure: {name:"큐어",   mp:6,  kind:"cure", target:"ally", emo:"🌿"},
     // 소환수
     ifrit:  {name:"소환:이프리트", mp:24, kind:"summon", power:1.6, target:"allEnemies", emo:"🔥", glyph:"😈", summon:"이프리트"},
     shiva:  {name:"소환:시바",   mp:26, kind:"summon", power:1.5, target:"allEnemies", emo:"❄️", glyph:"🧊", summon:"시바"},
@@ -1356,10 +1380,10 @@
   // 동료 로스터(8인). g: 성장타입(phys/mag), row: 기본 배치
   const ROSTER_DEF = [
     { key:"gwangmin", name:"광민", emoji:"🤺", g:"phys", sprites:POSE, row:"front", base:{maxHp:84,maxMp:12,atk:18,def:9, mag:6, spd:11}, abil:["smash"] },
-    { key:"leon",     name:"레온", emoji:"🛡️", g:"phys", row:"front", base:{maxHp:74,maxMp:24,atk:14,def:10,mag:11,spd:9},  abil:["heal","fire"] },
+    { key:"leon",     name:"레온", emoji:"🛡️", g:"phys", row:"front", base:{maxHp:74,maxMp:24,atk:14,def:10,mag:11,spd:9},  abil:["heal","cure","fire"] },
     { key:"gangwoo",  name:"강우", emoji:"🥊", g:"phys", row:"front", base:{maxHp:92,maxMp:8, atk:19,def:8, mag:4, spd:10}, abil:["smash"] },
     { key:"aria",     name:"아리아", emoji:"🧙", g:"mag",  row:"back",  base:{maxHp:50,maxMp:42,atk:9, def:5, mag:19,spd:12}, abil:["fire","bolt","ifrit"] },
-    { key:"mir",      name:"미르", emoji:"⛪", g:"mag",  row:"back",  base:{maxHp:56,maxMp:38,atk:10,def:6, mag:16,spd:10}, abil:["heal","fire","phoenix"] },
+    { key:"mir",      name:"미르", emoji:"⛪", g:"mag",  row:"back",  base:{maxHp:56,maxMp:38,atk:10,def:6, mag:16,spd:10}, abil:["heal","cure","fire","phoenix"] },
     { key:"jihun",    name:"지훈", emoji:"🏹", g:"phys", row:"back",  base:{maxHp:62,maxMp:14,atk:16,def:6, mag:8, spd:15}, abil:["shot"] },
     { key:"sera",     name:"세라", emoji:"🗡️", g:"phys", row:"reserve", base:{maxHp:60,maxMp:12,atk:17,def:7,mag:6, spd:16}, abil:["smash"] },
     { key:"daon",     name:"다온", emoji:"🔱", g:"phys", row:"reserve", base:{maxHp:80,maxMp:14,atk:17,def:9,mag:7, spd:9},  abil:["smash"] },
@@ -1369,7 +1393,7 @@
     abilities:d.abil.map(k=>({ ...AB[k] })), side:"hero", lv:1, exp:0, expNext:24,
     maxHp:d.base.maxHp, maxMp:d.base.maxMp, atk:d.base.atk, def:d.base.def, mag:d.base.mag, spd:d.base.spd,
     hp:d.base.maxHp, mp:d.base.maxMp, equip:{weapon:null,head:null,body:null,gloves:null,boots:null,shield:null,accessory:null},
-    defending:false, stun:false, el:null }; }
+    st:{}, defending:false, stun:false, el:null }; }
   function grow(h){ const g = h.g === "mag" ? {hp:5,mp:5,atk:1,def:1,mag:3,spd:1} : {hp:9,mp:2,atk:2,def:1,mag:1,spd:1};
     h.maxHp+=g.hp; h.maxMp+=g.mp; h.atk+=g.atk; h.def+=g.def; h.mag+=g.mag; h.spd+=g.spd; h.hp=eStat(h,"maxHp"); h.mp=eStat(h,"maxMp"); }
   function gainExp(h, amt){ h.exp += amt; let up = false;
@@ -1383,6 +1407,8 @@
     potion:  { name:"포션",     type:"consumable", icon:"🧪", heal:50,  price:30,  desc:"HP 50 회복" },
     hipotion:{ name:"하이포션", type:"consumable", icon:"🍶", heal:150, price:90,  desc:"HP 150 회복" },
     ether:   { name:"에테르",   type:"consumable", icon:"💧", mp:25,   price:60,  desc:"MP 25 회복" },
+    antidote:{ name:"해독제",   type:"consumable", icon:"💊", cure:["poison"], price:30, desc:"독 치료" },
+    remedy:  { name:"만능약",   type:"consumable", icon:"🧴", cure:["poison","paralyze","silence","sleep"], price:120, desc:"모든 상태이상 치료" },
     sword:   { name:"강철검",   type:"weapon", icon:"⚔️", bonus:{atk:6},          price:120, desc:"공격 +6" },
     greatsword:{ name:"대검",   type:"weapon", icon:"🗡️", bonus:{atk:11,spd:-1},  price:300, desc:"공격 +11, 속도 -1" },
     staff:   { name:"마법지팡이", type:"weapon", icon:"🪄", bonus:{mag:8},         price:160, desc:"마력 +8" },
@@ -1404,13 +1430,13 @@
   const DEFAULT_INV = () => ({ potion:5, hipotion:1, ether:2, sword:1, staff:1, helm:1, plate:1, shield:1, gloves:1, boots:1, ring:1 });
 
   const ENEMY_DEF = [
-    { name:"슬라임", emoji:"🟢", maxHp:34, atk:11, def:3, spd:7,  exp:6,  gold:5,  drops:[{id:"potion",chance:.3}] },
-    { name:"고블린", emoji:"👺", maxHp:52, atk:16, def:6, spd:10, exp:14, gold:12, drops:[{id:"potion",chance:.4},{id:"sword",chance:.08}] },
-    { name:"박쥐",   emoji:"🦇", maxHp:26, atk:13, def:2, spd:15, exp:8,  gold:6,  drops:[{id:"ether",chance:.25}] },
-    { name:"늑대",   emoji:"🐺", maxHp:44, atk:17, def:4, spd:13, exp:13, gold:10, drops:[{id:"hipotion",chance:.12},{id:"boots",chance:.06}] },
+    { name:"슬라임", emoji:"🟢", maxHp:34, atk:11, def:3, spd:7,  exp:6,  gold:5,  drops:[{id:"potion",chance:.3}], inflict:{poison:.3} },
+    { name:"고블린", emoji:"👺", maxHp:52, atk:16, def:6, spd:10, exp:14, gold:12, drops:[{id:"potion",chance:.4},{id:"sword",chance:.08},{id:"antidote",chance:.2}], inflict:{silence:.22} },
+    { name:"박쥐",   emoji:"🦇", maxHp:26, atk:13, def:2, spd:15, exp:8,  gold:6,  drops:[{id:"ether",chance:.25}], inflict:{sleep:.25} },
+    { name:"늑대",   emoji:"🐺", maxHp:44, atk:17, def:4, spd:13, exp:13, gold:10, drops:[{id:"hipotion",chance:.12},{id:"boots",chance:.06}], inflict:{paralyze:.25} },
   ];
   const BOSS = { name:"고대 수호기사", emoji:"🐲", maxHp:620, atk:34, def:14, spd:11, exp:240, gold:350, boss:true,
-    drops:[{id:"greatsword",chance:1},{id:"amulet",chance:1},{id:"hipotion",chance:1}] };
+    drops:[{id:"greatsword",chance:1},{id:"amulet",chance:1},{id:"hipotion",chance:1},{id:"remedy",chance:1}], inflict:{paralyze:.3} };
   let roster = [], party = [], enemies = [], items = DEFAULT_INV();
   const newItems = new Set();                 // 새로 얻은 아이템(가방에서 NEW 표시)
   function addNew(id){ newItems.add(id); }
@@ -1441,7 +1467,7 @@
     const spr = b.sprites
       ? `<div class="spr"><img class="hspr" alt="" src="${b.sprites.stance}" onload="this.closest('.spr').classList.add('hasimg')" onerror="this.remove()"><span class="emo">${b.emoji}</span></div>`
       : `<div class="spr"><span class="emo">${b.emoji}</span></div>`;
-    d.innerHTML = spr + `<div class="bname">${b.label||b.name}</div>` + (b.boss?`<div class="bosslabel">HP ???</div>`:``) + `<div class="bhp"><i></i></div>` + (b.side==="hero"?`<div class="bmp"><i></i></div>`:``);
+    d.innerHTML = spr + `<div class="bname">${b.label||b.name}</div><div class="bst"></div>` + (b.boss?`<div class="bosslabel">HP ???</div>`:``) + `<div class="bhp"><i></i></div>` + (b.side==="hero"?`<div class="bmp"><i></i></div>`:``);
     return d; }
   function heroPose(b, pose){ if (!b.sprites || !b.el) return; const img = b.el.querySelector(".hspr"); if (img && b.sprites[pose]) img.src = b.sprites[pose]; }
   function restPose(b){ if (b.side === "hero") heroPose(b, b.hp<=0 ? "death" : (b.stun ? "stunned" : "stance")); }
@@ -1459,6 +1485,7 @@
     if (b.boss){ const lab = b.el.querySelector(".bosslabel");
       if (ratio <= 0.35){ b.el.classList.add("revealed"); if (lab) lab.textContent = `HP ${Math.max(0,b.hp)} / ${b.maxHp}`; }
       else if (lab) lab.textContent = "HP ???"; }
+    const bst = b.el.querySelector(".bst"); if (bst) bst.textContent = stIcons(b);
     if (b.side === "hero") renderBP(); }
   const setActive = (b,on) => b.el && b.el.classList.toggle("active", on);
   // FF식 파티 상태창
@@ -1508,10 +1535,13 @@
     sparkAt(tgt, opt.emo || (crit ? "💥" : "✦"));
     popNum(tgt, d, crit ? "crit" : "");
     if (opt.kind !== "mag") (crit ? SFX.crit() : SFX.hit());
+    if (tgt.st && tgt.st.sleep){ delete tgt.st.sleep; }   // 피격 시 수면 해제
     hurtFx(tgt); shake(crit || d >= 22); updateBattler(tgt);
     if (tgt.side === "hero" && tgt.hp > 0) heroPose(tgt, crit ? "staggered" : "hit");
     if (opt.kind === "mag") att.el.classList.remove("cast");
     if (crit && tgt.hp > 0 && Math.random() < 0.5){ tgt.stun = true; stunOn(tgt); popNum(tgt, "기절!", "miss"); }
+    // 공격자의 상태이상 부여
+    if (att.inflict && tgt.hp > 0){ for (const k in att.inflict){ if (Math.random() < att.inflict[k]){ addStatus(tgt, k, 3); popNum(tgt, STATUS[k].name+"!", "miss"); updateBattler(tgt); break; } } }
     await delay(crit ? 420 : 300);
     restPose(att);
     if (tgt.hp <= 0){ if (tgt.side === "hero") heroPose(tgt, "death"); await die(tgt); }
@@ -1575,9 +1605,10 @@
   }
   function mainMenu(h){
     return new Promise(res => {
+      const silenced = h.st && h.st.silence;
       const main = () => renderMenu([
         { l:"공격",      f:() => res({k:"attack"}) },
-        { l:"마법·스킬", f:() => renderMenu(abil()) },
+        { l: silenced ? "마법·스킬 🤐" : "마법·스킬", dis:silenced, f:() => renderMenu(abil()) },
         { l:"아이템",    f:() => renderMenu(itm()) },
         { l:"방어",      f:() => res({k:"defend"}) },
         { l:"도망",      f:() => res({k:"flee"}) },
@@ -1605,12 +1636,14 @@
         if (ab.target === "allEnemies"){ clearMenu(); h.mp -= ab.mp; updateBattler(h); setLog(`${h.name} — ${ab.name}!`); await castAll(h, ab); break; }
         const t = await pickTarget(ab.target === "ally" ? "hero" : "enemy"); if (!t) continue;
         clearMenu(); h.mp -= ab.mp; updateBattler(h); setLog(`${h.name} — ${ab.name}!`);
+        if (ab.kind === "cure"){ heroPose(h,"casting"); h.el.classList.add("cast"); SFX.heal(); await delay(360); cureAll(t); sparkAt(t,"🌿"); popNum(t,"상태 회복","heal"); updateBattler(t); await delay(360); h.el.classList.remove("cast"); restPose(h); break; }
         await act(h, t, { power:ab.power, kind:ab.kind, emo:ab.emo }); break; }
       if (c.k === "item"){ const k = c.item; if (!items[k]) continue; const it = DB[k];
         const t = await pickTarget("hero"); if (!t) continue; clearMenu();
         items[k]--; if (items[k] <= 0) delete items[k];
         if (it.heal){ t.hp = Math.min(eStat(t,"maxHp"), t.hp + it.heal); popNum(t, "+"+it.heal, "heal"); }
         if (it.mp){ t.mp = Math.min(eStat(t,"maxMp"), t.mp + it.mp); popNum(t, "+"+it.mp, "heal"); }
+        if (it.cure){ it.cure.forEach(s => { if (t.st) delete t.st[s]; }); popNum(t, "회복", "heal"); }
         sparkAt(t, it.icon); SFX.item(); updateBattler(t); setLog(`${it.name} 사용!`); await delay(700); break; }
     }
     setActive(h, false);
@@ -1631,7 +1664,18 @@
         if (!aliveH().length) return defeat();
         a.defending = false; updateBattler(a); restPose(a);
         _acting = a.side === "hero" ? a : null; renderBP();
-        if (a.stun){ a.stun = false; stunOff(a); setLog((a.label||a.name) + " 기절 — 행동할 수 없다!"); await delay(850); restPose(a); _acting = null; renderBP(); continue; }
+        const nm0 = a.label || a.name;
+        // 독 — 턴 시작 피해
+        if (a.st && a.st.poison){ const dmg = Math.max(3, Math.round(eStat(a,"maxHp")*0.07)); a.hp -= dmg; popNum(a, dmg, ""); sparkAt(a, "🟣"); hurtFx(a); updateBattler(a);
+          if (--a.st.poison <= 0) delete a.st.poison; await delay(550);
+          if (a.hp <= 0){ if (a.side==="hero") heroPose(a,"death"); await die(a); _acting=null; renderBP();
+            if (!aliveE().length) return victory(); if (!aliveH().length) return defeat(); continue; } }
+        if (a.stun){ a.stun = false; stunOff(a); setLog(nm0 + " 기절 — 행동할 수 없다!"); await delay(850); restPose(a); _acting = null; renderBP(); continue; }
+        // 수면 — 행동 불가(자연 회복)
+        if (a.st && a.st.sleep){ if (--a.st.sleep <= 0) delete a.st.sleep; updateBattler(a); setLog(nm0 + " 은(는) 잠들어 있다…"); await delay(800); _acting=null; renderBP(); continue; }
+        // 마비 — 확률로 행동 불가
+        if (a.st && a.st.paralyze){ if (--a.st.paralyze <= 0) delete a.st.paralyze; updateBattler(a);
+          if (Math.random() < 0.5){ setLog(nm0 + " 은(는) 마비되어 움직일 수 없다!"); await delay(800); _acting=null; renderBP(); continue; } }
         if (a.side === "hero"){ const r = await heroTurn(a); if (r === "flee"){ setLog("무사히 도망쳤다!"); clearMenu(); await delay(650); B = null; _acting = null; resumeField(); return; } }
         else await enemyAct(a);
         _acting = null; renderBP();
@@ -1706,7 +1750,7 @@
     const n = 1 + Math.floor(Math.random()*3);
     enemies = [];
     for (let i = 0; i < n; i++){ const d = ENEMY_DEF[Math.floor(Math.random()*ENEMY_DEF.length)];
-      enemies.push({ ...d, side:"enemy", hp:d.maxHp, mp:0, defending:false, stun:false, el:null }); }
+      enemies.push({ ...d, side:"enemy", hp:d.maxHp, mp:0, st:{}, defending:false, stun:false, el:null }); }
     // 동명 적 구분(A/B/C)
     const cnt = {}; enemies.forEach(e => cnt[e.name] = (cnt[e.name]||0)+1);
     const seen = {}; enemies.forEach(e => { if (cnt[e.name] > 1){ seen[e.name] = (seen[e.name]||0); e.label = e.name + " " + "ABC"[seen[e.name]]; seen[e.name]++; } else e.label = e.name; });
@@ -1720,7 +1764,7 @@
     stopField();
     _bossObj = o || null;
     party = battleParty();
-    enemies = [ { ...BOSS, side:"enemy", hp:BOSS.maxHp, mp:0, defending:false, stun:false, el:null, label:BOSS.name } ];
+    enemies = [ { ...BOSS, side:"enemy", hp:BOSS.maxHp, mp:0, st:{}, defending:false, stun:false, el:null, label:BOSS.name } ];
     buildBattlers();
     show("scBattle"); SFX.encounter();
     setLog(`${BOSS.name}이(가) 앞을 가로막는다!`);
