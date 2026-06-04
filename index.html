@@ -169,6 +169,57 @@
   .invrow .iv-info .iv-sub{display:block; color:var(--muted); font-size:11px;}
   .invrow .iv-act{font-size:12px; color:#1c1206; background:linear-gradient(180deg,#f0d28c,#d7a948); border-radius:7px; padding:6px 10px;}
 
+  /* 통합 메뉴 */
+  .hud-menu{position:absolute; top:52px; right:14px; z-index:10;
+    background:var(--panel); border:1px solid var(--gold-line); color:var(--gold); font-size:13px; padding:7px 13px; border-radius:9px; cursor:pointer;}
+  #scMenu{justify-content:flex-start; padding:0;}
+  .menu-wrap{flex:1; width:100%; display:flex; gap:10px; padding:22px 16px 8px;}
+  .menu-cmds{width:42%; display:flex; flex-direction:column; gap:9px;}
+  .menu-cmds .mcmd{font-family:var(--serif); font-size:17px; color:var(--ink); text-align:left;
+    background:var(--panel); border:1px solid var(--gold-line); border-radius:10px; padding:13px 16px; cursor:pointer;}
+  .menu-cmds .mcmd:active{transform:scale(.98);}
+  .menu-party{flex:1; display:flex; flex-direction:column; gap:8px; overflow-y:auto;}
+  .mp-row{display:flex; align-items:center; gap:9px; background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:8px 10px;}
+  .mp-row .mp-emo{font-size:24px;}
+  .mp-row .mp-info{flex:1; font-family:var(--serif); color:var(--ink); font-size:13px;}
+  .mp-row .mp-bars{display:block; height:5px; margin-top:4px; background:rgba(0,0,0,.5); border-radius:3px; overflow:hidden;}
+  .mp-row .mp-bars i{display:block; height:100%;}
+  .mp-row .mp-bars i.hp{background:linear-gradient(180deg,#5fce7a,#2f8a48);}
+  .mp-row .mp-bars i.mp{background:linear-gradient(180deg,#6aa8ff,#2f5fb0);}
+  .menu-foot{padding:12px; text-align:center; color:var(--gold); font-size:14px;}
+
+  /* 초상화 */
+  .eq-portrait{position:relative; width:80px; height:80px; border:1px solid var(--gold-line); border-radius:10px;
+    background:radial-gradient(circle at 50% 30%, rgba(40,55,110,.5), rgba(8,12,28,.7)); display:flex; align-items:center; justify-content:center; overflow:hidden;}
+  .eq-portrait.sm{width:56px; height:56px;}
+  .eq-portrait .pf-emo{font-size:40px;}
+  .eq-portrait.sm .pf-emo{font-size:30px;}
+  .eq-portrait .pf-img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain;}
+  .eq-portrait.hasimg .pf-emo{display:none;}
+  .eq-job{display:block; font-size:11px; color:var(--gold-dim); font-family:var(--sans);}
+
+  /* 스테이터스 */
+  .st-top{display:flex; gap:12px; align-items:center;}
+  .st-info{flex:1; color:var(--ink); font-size:13px; line-height:1.5;}
+  .st-info .st-lv{font-family:var(--serif); color:var(--gold); font-size:16px;}
+  .st-info .st-bar{height:6px; background:rgba(0,0,0,.5); border:1px solid var(--line); border-radius:4px; overflow:hidden; margin:3px 0;}
+  .st-info .st-bar > i{display:block; height:100%; background:linear-gradient(180deg,#e6c074,#b8924a);}
+  .st-stats{display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; background:rgba(8,12,28,.45); border:1px solid var(--line); border-radius:9px; padding:9px 14px;}
+  .st-stats .strow{display:flex; justify-content:space-between; font-size:13px; color:var(--ink);}
+  .st-stats .strow em{color:var(--gold); font-style:normal; font-size:11px;}
+  .st-equip{display:flex; flex-direction:column; gap:4px;}
+  .st-eqrow{display:flex; justify-content:space-between; font-size:13px; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:7px 12px;}
+  .st-eqrow .se-lab{color:var(--muted);}
+
+  /* 장비 탭 / 액션 */
+  .eq-actions{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .eq-actions .eq-gold{color:var(--gold); font-size:13px;}
+  .eq-auto{font-family:var(--serif); font-size:13px; color:#1c1206; background:linear-gradient(180deg,#f0d28c,#d7a948);
+    border:1px solid #f5dca0; border-radius:9px; padding:8px 14px; cursor:pointer;}
+  .eq-tabs{display:flex; gap:6px;}
+  .eq-tabs .eqtab{flex:1; font-size:13px; color:var(--muted); background:rgba(12,20,46,.6); border:1px solid var(--line); border-radius:8px 8px 0 0; padding:9px 0; cursor:pointer;}
+  .eq-tabs .eqtab.on{color:var(--gold); background:var(--panel); border-color:var(--gold-line); border-bottom-color:transparent;}
+
   /* 가상 조이스틱 (떠다니는 방식 · 반투명) — 누른 자리에 생성 */
   #joyBase{position:absolute; z-index:10; width:148px; height:148px; border-radius:50%;
     transform:translate(-50%,-50%); pointer-events:none; touch-action:none;
@@ -287,9 +338,7 @@
     <canvas id="fieldCanvas"></canvas>
     <div class="hud"><div class="kick">NORTHERN WOODS</div><div class="loc">북부 숲길</div></div>
     <button class="hud-back" data-a="back">타이틀 ›</button>
-    <button class="hud-save" id="btnSave">💾 저장</button>
-    <button class="hud-party" id="btnParty">👥 파티</button>
-    <button class="hud-bag" id="btnBag">🎒 장비</button>
+    <button class="hud-menu" id="btnMenu">☰ 메뉴</button>
     <div class="hud-gold">🪙 <span id="goldVal">0</span></div>
     <div id="joyBase"><div id="joyKnob"></div></div>
     <button id="aBtn">A</button>
@@ -324,22 +373,54 @@
     </div>
   </section>
 
+  <!-- ===== 메뉴 (FF/테일즈식) ===== -->
+  <section class="screen hidden" id="scMenu">
+    <div class="menu-wrap">
+      <div class="menu-cmds" id="menuCmds"></div>
+      <div class="menu-party" id="menuParty"></div>
+    </div>
+    <div class="menu-foot">🪙 골드 <span id="menuGold">0</span></div>
+  </section>
+
+  <!-- ===== 스테이터스 ===== -->
+  <section class="screen hidden" id="scStatus">
+    <div class="sheet">
+      <div class="eq-head">
+        <button class="eq-arrow" id="stPrev">‹</button>
+        <div class="eq-who"><span id="stName"></span></div>
+        <button class="eq-arrow" id="stNext">›</button>
+      </div>
+      <div class="st-top">
+        <div class="eq-portrait" id="stPortrait"></div>
+        <div class="st-info" id="stInfo"></div>
+      </div>
+      <div class="st-stats" id="stStats"></div>
+      <div class="eq-invtitle">장착 장비</div>
+      <div class="st-equip" id="stEquip"></div>
+      <button class="sheet-close" id="stClose">뒤로</button>
+    </div>
+  </section>
+
   <!-- ===== 장비 / 인벤토리 (디아블로식) ===== -->
   <section class="screen hidden" id="scEquip">
     <div class="sheet">
       <div class="eq-head">
         <button class="eq-arrow" id="eqPrev">‹</button>
-        <div class="eq-who"><span id="eqEmo"></span> <span id="eqName"></span></div>
+        <div class="eq-portrait sm" id="eqPortrait"></div>
+        <div class="eq-who"><span id="eqName"></span><span class="eq-job" id="eqJob"></span></div>
         <button class="eq-arrow" id="eqNext">›</button>
       </div>
       <div class="eq-top">
         <div class="paperdoll" id="paperdoll"></div>
         <div class="eq-stats" id="eqStats"></div>
       </div>
-      <div class="eq-gold">🪙 골드 <span id="eqGold">0</span></div>
-      <div class="eq-invtitle">가방 — 장비를 탭해 장착 / 소모품 사용</div>
+      <div class="eq-actions">
+        <span class="eq-gold">🪙 <span id="eqGold">0</span></span>
+        <button class="eq-auto" id="eqAuto">⚡ 최강 장착</button>
+      </div>
+      <div class="eq-tabs" id="eqTabs"></div>
       <div class="sheet-list" id="invList"></div>
-      <button class="sheet-close" id="eqClose">닫기</button>
+      <button class="sheet-close" id="eqClose">뒤로</button>
     </div>
   </section>
 
@@ -753,10 +834,58 @@
       list.appendChild(row);
     });
   }
-  function slotsBack(){ if (_slotBack === "field") resumeField(); else { refreshTitle(); show("scTitle"); } }
+  function slotsBack(){ if (_slotBack === "menu") backToMenu(); else if (_slotBack === "title"){ refreshTitle(); show("scTitle"); } else resumeField(); }
+
+  /* ===== 메뉴(FF/테일즈식) — 통합 진입 ===== */
+  const JOBS = { gwangmin:"용사", leon:"성기사", gangwoo:"권사", aria:"마법사", mir:"사제", jihun:"궁수", sera:"도적", daon:"창기사" };
+  function portraitHTML(h){
+    const img = h.sprites ? `<img class="pf-img" src="${h.sprites.idle}" onload="this.closest('.eq-portrait').classList.add('hasimg')" onerror="this.remove()">` : "";
+    return `${img}<span class="pf-emo">${h.emoji}</span>`;
+  }
+  function openGameMenu(){ stopField(); renderGameMenu(); show("scMenu"); }
+  function backToMenu(){ renderGameMenu(); show("scMenu"); }
+  function renderGameMenu(){
+    document.getElementById("menuGold").textContent = prog.gold;
+    const cmds = [["status","스테이터스"],["equip","장비"],["items","아이템"],["party","배치"],["save","저장"],["close","닫기"]];
+    const mc = document.getElementById("menuCmds"); mc.innerHTML = "";
+    cmds.forEach(([k,l]) => { const b = document.createElement("button"); b.className = "mcmd"; b.textContent = l;
+      b.onclick = () => ({ status:()=>openStatus(), equip:()=>openEquip("weapon"), items:()=>openEquip("consumable"),
+        party:()=>openParty(), save:()=>openSlots("save","menu"), close:()=>resumeField() }[k]());
+      mc.appendChild(b); });
+    const mp = document.getElementById("menuParty"); mp.innerHTML = "";
+    battleParty().forEach(h => { const d = document.createElement("div"); d.className = "mp-row";
+      d.innerHTML = `<span class="mp-emo">${h.emoji}</span>
+        <span class="mp-info"><b>${h.name}</b> <span class="p-lv">Lv.${h.lv}</span>
+          <span class="mp-bars"><i class="hp" style="width:${h.hp/eStat(h,"maxHp")*100}%"></i></span>
+          <span class="mp-bars"><i class="mp" style="width:${h.mp/eStat(h,"maxMp")*100}%"></i></span></span>`;
+      mp.appendChild(d); });
+  }
+
+  /* ===== 스테이터스 ===== */
+  let _stHero = 0;
+  function openStatus(){ renderStatus(); show("scStatus"); }
+  function renderStatus(){
+    const h = roster[_stHero];
+    document.getElementById("stName").textContent = `${h.name} — ${JOBS[h.key]||""}`;
+    document.getElementById("stPortrait").innerHTML = portraitHTML(h);
+    document.getElementById("stInfo").innerHTML =
+      `<div class="st-lv">Lv. ${h.lv}</div>
+       <div class="st-ex">EXP ${h.exp} / ${h.expNext}</div>
+       <div class="st-bar"><i style="width:${h.exp/h.expNext*100}%"></i></div>
+       <div class="st-hp">HP ${h.hp} / ${eStat(h,"maxHp")}　MP ${h.mp} / ${eStat(h,"maxMp")}</div>
+       <div class="st-row2">${h.row==="reserve"?"대기":h.row==="front"?"전열":"후열"}</div>`;
+    document.getElementById("stStats").innerHTML = ["atk","def","mag","spd"].map(k => {
+      const bon = eBonus(h,k); return `<div class="strow"><span>${STAT_LABEL[k]}</span><span>${eStat(h,k)}${bon?` <em>(${bon>0?"+":""}${bon})</em>`:""}</span></div>`;
+    }).join("");
+    document.getElementById("stEquip").innerHTML = EQ_SLOTS.map(slot => {
+      const id = h.equip[slot], it = id ? DB[id] : null;
+      return `<div class="st-eqrow"><span class="se-lab">${EQ_LABEL[slot]}</span><span class="se-val">${it?`${it.icon} ${it.name}`:"—"}</span></div>`;
+    }).join("");
+  }
 
   /* ===== 장비 / 인벤토리 (디아블로식 장비창) ===== */
-  let _eqHero = 0;
+  let _eqHero = 0, _eqTab = "weapon";
+  const ARMOR_SLOTS = ["head","body","gloves","boots","shield","accessory"];
   function equipItem(h, id){ const it = DB[id]; if (!it || it.type === "consumable" || !items[id]) return;
     const slot = it.type, cur = h.equip[slot];
     items[id]--; if (items[id] <= 0) delete items[id];
@@ -767,11 +896,26 @@
     if (it.heal) h.hp = Math.min(eStat(h,"maxHp"), h.hp + it.heal);
     if (it.mp)   h.mp = Math.min(eStat(h,"maxMp"), h.mp + it.mp);
     items[id]--; if (items[id] <= 0) delete items[id]; autosave(); return true; }
-  function openEquip(){ stopField(); _eqHero = 0; renderEquip(); show("scEquip"); }
+  function gearScore(h, it){ if (!it || !it.bonus) return 0; const b = it.bonus, aw = h.g==="mag"?1:3, mw = h.g==="mag"?3:1;
+    return (b.atk||0)*aw + (b.mag||0)*mw + (b.def||0)*2 + (b.maxHp||0)*0.2 + (b.maxMp||0)*0.2 + (b.spd||0); }
+  function autoBest(h){
+    let changed = 0;
+    for (const slot of EQ_SLOTS){
+      const cands = Object.keys(items).filter(id => items[id] > 0 && DB[id] && DB[id].type === slot);
+      if (h.equip[slot]) cands.push(h.equip[slot]);
+      if (!cands.length) continue;
+      let best = h.equip[slot], bestSc = h.equip[slot] ? gearScore(h, DB[h.equip[slot]]) : -1;
+      for (const id of cands){ const sc = gearScore(h, DB[id]); if (sc > bestSc){ bestSc = sc; best = id; } }
+      if (best && best !== h.equip[slot]){ equipItem(h, best); changed++; }
+    }
+    toast(changed ? `${h.name} — 최강 장비 ${changed}곳 장착!` : "이미 최적 장비예요");
+  }
+  function openEquip(tab){ _eqTab = tab || "weapon"; renderEquip(); show("scEquip"); }
   function renderEquip(){
     const h = roster[_eqHero];
-    document.getElementById("eqEmo").textContent = h.emoji;
+    document.getElementById("eqPortrait").innerHTML = portraitHTML(h);
     document.getElementById("eqName").textContent = `${h.name}  Lv.${h.lv}`;
+    document.getElementById("eqJob").textContent = JOBS[h.key] || "";
     document.getElementById("eqGold").textContent = prog.gold;
     const pd = document.getElementById("paperdoll"); pd.innerHTML = "";
     EQ_SLOTS.forEach(slot => {
@@ -786,9 +930,14 @@
       const base = h[k]||0, bon = eBonus(h,k);
       return `<div class="strow"><span>${STAT_LABEL[k]}</span><span>${base+bon}${bon?` <em>(${bon>0?"+":""}${bon})</em>`:""}</span></div>`;
     }).join("");
+    const tabs = [["weapon","무기"],["armor","방어구"],["consumable","아이템"]];
+    const tb = document.getElementById("eqTabs"); tb.innerHTML = "";
+    tabs.forEach(([k,l]) => { const b = document.createElement("button"); b.className = "eqtab" + (_eqTab===k?" on":""); b.textContent = l;
+      b.onclick = () => { _eqTab = k; renderEquip(); }; tb.appendChild(b); });
+    const match = id => { const t = DB[id].type; return _eqTab === "weapon" ? t === "weapon" : _eqTab === "consumable" ? t === "consumable" : ARMOR_SLOTS.includes(t); };
     const list = document.getElementById("invList"); list.innerHTML = "";
-    const ids = Object.keys(items).filter(id => items[id] > 0 && DB[id]);
-    if (!ids.length){ list.innerHTML = `<div class="inv-empty">가방이 비어 있어요</div>`; return; }
+    const ids = Object.keys(items).filter(id => items[id] > 0 && DB[id] && match(id));
+    if (!ids.length){ list.innerHTML = `<div class="inv-empty">해당 분류 아이템이 없어요</div>`; return; }
     ids.forEach(id => { const it = DB[id]; const row = document.createElement("button"); row.className = "invrow";
       const sub = it.type === "consumable" ? it.desc : `${EQ_LABEL[it.type]} · ${bonusText(it)}`;
       row.innerHTML = `<span class="iv-ic">${it.icon}</span><span class="iv-info"><b>${it.name}</b> ×${items[id]}<span class="iv-sub">${sub}</span></span><span class="iv-act">${it.type==="consumable"?"사용":"장착"}</span>`;
@@ -798,7 +947,7 @@
   }
 
   /* ===== 파티 편성 (전열3·후열3·대기) ===== */
-  function openParty(){ stopField(); renderParty(); show("scParty"); }
+  function openParty(){ renderParty(); show("scParty"); }
   function renderParty(){
     const fr = roster.filter(h => h.row === "front").length, bk = roster.filter(h => h.row === "back").length;
     document.getElementById("partyCounts").textContent = `전열 ${fr}/3 · 후열 ${bk}/3 · 골드 ${prog.gold}`;
@@ -862,14 +1011,16 @@
   document.addEventListener("keyup",   e => { if (KEY[e.key]) keys[KEY[e.key]] = false; });
 
   $("#aBtn").addEventListener("click", () => pressA());
-  document.getElementById("btnSave").addEventListener("click", () => openSlots("save","field"));
-  document.getElementById("btnParty").addEventListener("click", () => openParty());
-  document.getElementById("btnBag").addEventListener("click", () => openEquip());
+  document.getElementById("btnMenu").addEventListener("click", () => openGameMenu());
   document.getElementById("slotClose").addEventListener("click", () => slotsBack());
-  document.getElementById("partyClose").addEventListener("click", () => resumeField());
-  document.getElementById("eqClose").addEventListener("click", () => resumeField());
+  document.getElementById("partyClose").addEventListener("click", () => backToMenu());
+  document.getElementById("eqClose").addEventListener("click", () => backToMenu());
   document.getElementById("eqPrev").addEventListener("click", () => { _eqHero = (_eqHero - 1 + roster.length) % roster.length; renderEquip(); });
   document.getElementById("eqNext").addEventListener("click", () => { _eqHero = (_eqHero + 1) % roster.length; renderEquip(); });
+  document.getElementById("eqAuto").addEventListener("click", () => { autoBest(roster[_eqHero]); renderEquip(); });
+  document.getElementById("stClose").addEventListener("click", () => backToMenu());
+  document.getElementById("stPrev").addEventListener("click", () => { _stHero = (_stHero - 1 + roster.length) % roster.length; renderStatus(); });
+  document.getElementById("stNext").addEventListener("click", () => { _stHero = (_stHero + 1) % roster.length; renderStatus(); });
   // 대화창 어디든 탭하면 다음으로
   document.getElementById("dialog").addEventListener("pointerdown", e => { e.preventDefault(); advanceDialog(); });
   window.addEventListener("resize", () => { if (running) sizeCanvas(); });
