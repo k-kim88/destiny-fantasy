@@ -101,17 +101,18 @@
     background:var(--panel); border:1px solid var(--gold-line); color:var(--gold);
     font-size:13px; padding:7px 12px; border-radius:9px; cursor:pointer;}
 
-  /* D패드 */
-  #dpad{position:absolute; left:18px; bottom:26px; z-index:10;
-    width:152px; height:152px; touch-action:none; user-select:none;}
-  .dbtn{position:absolute; width:50px; height:50px; display:flex; align-items:center; justify-content:center;
-    font-size:18px; color:var(--gold); background:var(--panel); border:1px solid var(--gold-line);
-    border-radius:11px; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); cursor:pointer;}
-  .dbtn:active{background:rgba(230,192,116,.22);}
-  .dbtn.up{left:51px; top:0;} .dbtn.down{left:51px; bottom:0;}
-  .dbtn.left{left:0; top:51px;} .dbtn.right{right:0; top:51px;}
-  #dpad .hub{position:absolute; left:51px; top:51px; width:50px; height:50px;
-    border:1px solid var(--line); border-radius:11px; opacity:.4;}
+  /* 가상 조이스틱 */
+  #joyBase{position:absolute; left:30px; bottom:36px; z-index:10;
+    width:120px; height:120px; border-radius:50%; touch-action:none;
+    background:radial-gradient(circle, rgba(23,35,82,.5), rgba(12,20,46,.66));
+    border:1px solid var(--gold-line);
+    -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px);}
+  #joyBase::before{content:""; position:absolute; inset:30px; border-radius:50%;
+    border:1px dashed rgba(230,192,116,.25);}
+  #joyKnob{position:absolute; left:50%; top:50%; width:54px; height:54px; border-radius:50%;
+    transform:translate(-50%,-50%); pointer-events:none;
+    background:linear-gradient(180deg,#f0d28c,#c99a3f); border:1px solid #f5dca0;
+    box-shadow:0 3px 10px rgba(0,0,0,.45), inset 0 1px 2px rgba(255,255,255,.4);}
 
   /* A버튼(확인) */
   #aBtn{position:absolute; right:26px; bottom:42px; z-index:10;
@@ -147,13 +148,7 @@
     <canvas id="fieldCanvas"></canvas>
     <div class="hud"><div class="kick">NORTHERN WOODS</div><div class="loc">북부 숲길</div></div>
     <button class="hud-back" data-a="back">타이틀 ›</button>
-    <div id="dpad">
-      <div class="dbtn up"    data-dir="up">▲</div>
-      <div class="dbtn down"  data-dir="down">▼</div>
-      <div class="dbtn left"  data-dir="left">◀</div>
-      <div class="dbtn right" data-dir="right">▶</div>
-      <div class="hub"></div>
-    </div>
+    <div id="joyBase"><div id="joyKnob"></div></div>
     <button id="aBtn">A</button>
   </section>
 
@@ -245,8 +240,20 @@
 
   // 플레이어 (월드 좌표 px)
   const player = { x: 8 * TILE + TILE / 2, y: 4 * TILE + TILE / 2, face: 1 };
-  const held = { up:false, down:false, left:false, right:false };
+  const keys = { up:false, down:false, left:false, right:false };       // 키보드
+  const joy  = { active:false, x:0, y:0, id:null, cxp:0, cyp:0 };        // 가상 조이스틱(-1..1)
   const cam = { x: 0, y: 0 };
+
+  // 현재 입력 벡터 (조이스틱 우선, 없으면 키보드). 크기는 0..1
+  function inputVector(){
+    let x = joy.x, y = joy.y;
+    if (!joy.active){
+      x = (keys.right?1:0) - (keys.left?1:0);
+      y = (keys.down?1:0)  - (keys.up?1:0);
+      const m = Math.hypot(x, y); if (m > 1){ x /= m; y /= m; }
+    }
+    return { x, y, mag: Math.min(1, Math.hypot(x, y)) };
+  }
 
   function tileWalk(px, py){
     const c = Math.floor(px / TILE), r = Math.floor(py / TILE);
@@ -258,13 +265,12 @@
     if (!running) return;
     const dt = Math.min(40, ts - last || 16); last = ts; t = ts;
 
-    // 이동
-    let vx = (held.right?1:0) - (held.left?1:0);
-    let vy = (held.down?1:0) - (held.up?1:0);
-    if (vx || vy){
-      if (vx && vy){ vx *= .707; vy *= .707; }
-      if (vx) player.face = vx > 0 ? 1 : -1;
-      const sp = TILE * 0.05 * (dt / 16);
+    // 이동 (조이스틱/키보드 — 아날로그, 세기에 비례한 속도)
+    const inp = inputVector();
+    if (inp.mag > 0.12){
+      const vx = inp.x, vy = inp.y;
+      if (Math.abs(vx) > 0.05) player.face = vx > 0 ? 1 : -1;
+      const sp = TILE * 0.062 * (dt / 16);
       const nx = player.x + vx * sp;
       if (tileWalk(nx + (vx>0?TILE*0.28:vx<0?-TILE*0.28:0), player.y + TILE*0.30)) player.x = nx;
       const ny = player.y + vy * sp;
@@ -317,7 +323,7 @@
   }
 
   function drawPlayer(sx, sy){
-    const bob = (held.up||held.down||held.left||held.right) ? 0 : Math.sin(t*0.005)*1.2;
+    const bob = inputVector().mag > 0.12 ? 0 : Math.sin(t*0.005)*1.2;
     sy += bob;
     cx.fillStyle = "rgba(0,0,0,.3)"; cx.beginPath(); cx.ellipse(sx, sy, TILE*0.24, TILE*0.1, 0, 0, 7); cx.fill();
     cx.save(); cx.translate(sx, sy); cx.scale(player.face, 1);
@@ -338,22 +344,37 @@
     running = true; last = performance.now();
     cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   }
-  function stopField(){ running = false; cancelAnimationFrame(raf); clearHeld(); }
-  function clearHeld(){ held.up=held.down=held.left=held.right=false; }
+  function stopField(){ running = false; cancelAnimationFrame(raf); clearInput(); }
+  function clearInput(){ keys.up=keys.down=keys.left=keys.right=false; joy.active=false; joy.x=joy.y=0; resetKnob(); }
 
-  // D패드 입력
-  $$("#dpad .dbtn[data-dir]").forEach(b => {
-    const on  = e => { e.preventDefault(); held[b.dataset.dir] = true; };
-    const off = e => { e.preventDefault(); held[b.dataset.dir] = false; };
-    b.addEventListener("pointerdown", on);
-    b.addEventListener("pointerup", off);
-    b.addEventListener("pointerleave", off);
-    b.addEventListener("pointercancel", off);
+  // ===== 가상 조이스틱 =====
+  const joyBase = $("#joyBase"), joyKnob = $("#joyKnob"), JOY_R = 46;
+  function resetKnob(){ joyKnob.style.transform = "translate(-50%,-50%)"; }
+  function joyMove(e){
+    let dx = e.clientX - joy.cxp, dy = e.clientY - joy.cyp;
+    const d = Math.hypot(dx, dy);
+    if (d > JOY_R){ dx = dx / d * JOY_R; dy = dy / d * JOY_R; }
+    joy.x = dx / JOY_R; joy.y = dy / JOY_R;
+    joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  }
+  joyBase.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    joy.active = true; joy.id = e.pointerId;
+    const r = joyBase.getBoundingClientRect();
+    joy.cxp = r.left + r.width/2; joy.cyp = r.top + r.height/2;
+    try { joyBase.setPointerCapture(e.pointerId); } catch(_){}
+    joyMove(e);
   });
-  document.addEventListener("pointerup", () => { if (running) clearHeld(); });
+  joyBase.addEventListener("pointermove", e => { if (joy.active && e.pointerId === joy.id) joyMove(e); });
+  const joyEnd = e => { if (e.pointerId === joy.id){ joy.active = false; joy.x = joy.y = 0; resetKnob(); } };
+  joyBase.addEventListener("pointerup", joyEnd);
+  joyBase.addEventListener("pointercancel", joyEnd);
+
+  // ===== 키보드 =====
   const KEY = { ArrowUp:"up", ArrowDown:"down", ArrowLeft:"left", ArrowRight:"right", w:"up", s:"down", a:"left", d:"right" };
-  document.addEventListener("keydown", e => { if (running && KEY[e.key]){ e.preventDefault(); held[KEY[e.key]] = true; } });
-  document.addEventListener("keyup",   e => { if (KEY[e.key]) held[KEY[e.key]] = false; });
+  document.addEventListener("keydown", e => { if (running && KEY[e.key]){ e.preventDefault(); keys[KEY[e.key]] = true; } });
+  document.addEventListener("keyup",   e => { if (KEY[e.key]) keys[KEY[e.key]] = false; });
+
   $("#aBtn").addEventListener("click", () => toast("‘A’ — 상호작용/전투는 다음 단계에서!"));
   window.addEventListener("resize", () => { if (running) sizeCanvas(); });
 
