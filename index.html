@@ -101,18 +101,21 @@
     background:var(--panel); border:1px solid var(--gold-line); color:var(--gold);
     font-size:13px; padding:7px 12px; border-radius:9px; cursor:pointer;}
 
-  /* 가상 조이스틱 */
-  #joyBase{position:absolute; left:30px; bottom:36px; z-index:10;
-    width:120px; height:120px; border-radius:50%; touch-action:none;
-    background:radial-gradient(circle, rgba(23,35,82,.5), rgba(12,20,46,.66));
-    border:1px solid var(--gold-line);
-    -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px);}
-  #joyBase::before{content:""; position:absolute; inset:30px; border-radius:50%;
-    border:1px dashed rgba(230,192,116,.25);}
-  #joyKnob{position:absolute; left:50%; top:50%; width:54px; height:54px; border-radius:50%;
+  /* 가상 조이스틱 (떠다니는 방식 · 반투명) — 누른 자리에 생성 */
+  #joyBase{position:absolute; z-index:10; width:148px; height:148px; border-radius:50%;
+    transform:translate(-50%,-50%); pointer-events:none; touch-action:none;
+    opacity:0; transition:opacity .12s ease;
+    background:radial-gradient(circle, rgba(150,170,230,.13), rgba(40,55,110,.20));
+    border:1px solid rgba(230,192,116,.4);
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);}
+  #joyBase.on{opacity:.78;}
+  #joyBase::before{content:""; position:absolute; inset:40px; border-radius:50%;
+    border:1px dashed rgba(230,192,116,.28);}
+  #joyKnob{position:absolute; left:50%; top:50%; width:66px; height:66px; border-radius:50%;
     transform:translate(-50%,-50%); pointer-events:none;
-    background:linear-gradient(180deg,#f0d28c,#c99a3f); border:1px solid #f5dca0;
-    box-shadow:0 3px 10px rgba(0,0,0,.45), inset 0 1px 2px rgba(255,255,255,.4);}
+    background:radial-gradient(circle at 50% 38%, rgba(255,243,200,.72), rgba(201,154,63,.5));
+    border:1px solid rgba(245,220,160,.7);
+    box-shadow:0 3px 10px rgba(0,0,0,.32), inset 0 1px 3px rgba(255,255,255,.4);}
 
   /* A버튼(확인) */
   #aBtn{position:absolute; right:26px; bottom:42px; z-index:10;
@@ -345,30 +348,33 @@
     cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   }
   function stopField(){ running = false; cancelAnimationFrame(raf); clearInput(); }
-  function clearInput(){ keys.up=keys.down=keys.left=keys.right=false; joy.active=false; joy.x=joy.y=0; resetKnob(); }
+  function clearInput(){ keys.up=keys.down=keys.left=keys.right=false; hideJoy(); }
 
-  // ===== 가상 조이스틱 =====
-  const joyBase = $("#joyBase"), joyKnob = $("#joyKnob"), JOY_R = 46;
+  // ===== 떠다니는 가상 조이스틱 (캔버스 아무 곳이나 누르면 그 자리에 생성) =====
+  const app = $("#app"), joyBase = $("#joyBase"), joyKnob = $("#joyKnob"), JOY_R = 58;
   function resetKnob(){ joyKnob.style.transform = "translate(-50%,-50%)"; }
-  function joyMove(e){
-    let dx = e.clientX - joy.cxp, dy = e.clientY - joy.cyp;
+  function hideJoy(){ joy.active = false; joy.x = joy.y = 0; joyBase.classList.remove("on"); resetKnob(); }
+  function joyMove(clientX, clientY){
+    let dx = clientX - joy.cxp, dy = clientY - joy.cyp;
     const d = Math.hypot(dx, dy);
     if (d > JOY_R){ dx = dx / d * JOY_R; dy = dy / d * JOY_R; }
     joy.x = dx / JOY_R; joy.y = dy / JOY_R;
     joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
   }
-  joyBase.addEventListener("pointerdown", e => {
+  cv.addEventListener("pointerdown", e => {
     e.preventDefault();
     joy.active = true; joy.id = e.pointerId;
-    const r = joyBase.getBoundingClientRect();
-    joy.cxp = r.left + r.width/2; joy.cyp = r.top + r.height/2;
-    try { joyBase.setPointerCapture(e.pointerId); } catch(_){}
-    joyMove(e);
+    joy.cxp = e.clientX; joy.cyp = e.clientY;
+    const r = app.getBoundingClientRect();
+    joyBase.style.left = (e.clientX - r.left) + "px";
+    joyBase.style.top  = (e.clientY - r.top)  + "px";
+    joyBase.classList.add("on");
+    resetKnob();
   });
-  joyBase.addEventListener("pointermove", e => { if (joy.active && e.pointerId === joy.id) joyMove(e); });
-  const joyEnd = e => { if (e.pointerId === joy.id){ joy.active = false; joy.x = joy.y = 0; resetKnob(); } };
-  joyBase.addEventListener("pointerup", joyEnd);
-  joyBase.addEventListener("pointercancel", joyEnd);
+  document.addEventListener("pointermove", e => { if (joy.active && e.pointerId === joy.id) joyMove(e.clientX, e.clientY); });
+  const joyEnd = e => { if (joy.active && e.pointerId === joy.id) hideJoy(); };
+  document.addEventListener("pointerup", joyEnd);
+  document.addEventListener("pointercancel", joyEnd);
 
   // ===== 키보드 =====
   const KEY = { ArrowUp:"up", ArrowDown:"down", ArrowLeft:"left", ArrowRight:"right", w:"up", s:"down", a:"left", d:"right" };
