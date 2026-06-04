@@ -169,6 +169,10 @@
   .invrow .iv-info .iv-sub{display:block; color:var(--muted); font-size:11px;}
   .invrow .iv-act{font-size:12px; color:#1c1206; background:linear-gradient(180deg,#f0d28c,#d7a948); border-radius:7px; padding:6px 10px;}
   .iv-new, .m-new{display:inline-block; font-size:9px; font-weight:700; color:#1c1206; background:#ffd24a; border-radius:4px; padding:1px 5px; margin-left:4px; letter-spacing:.05em; vertical-align:middle; box-shadow:0 0 8px rgba(255,210,74,.6);}
+  .iv-act.off{background:none; color:var(--faint); border:1px solid var(--line);}
+  .sk-mp{color:#8fb6ff; font-size:11px;}
+  .invrow.inv-back{justify-content:center; color:var(--gold); opacity:.85;}
+  .invrow.inv-back .iv-info{flex:none; text-align:center; color:var(--gold);}
 
   /* 소환 연출 */
   #summonFx{position:absolute; inset:0; z-index:40; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; pointer-events:none;
@@ -498,6 +502,31 @@
       <div class="eq-invtitle">장착 장비</div>
       <div class="st-equip" id="stEquip"></div>
       <button class="sheet-close" id="stClose">뒤로</button>
+    </div>
+  </section>
+
+  <!-- ===== 마법 · 스킬 ===== -->
+  <section class="screen hidden" id="scSkill">
+    <div class="sheet">
+      <div class="eq-head">
+        <button class="eq-arrow" id="skPrev">‹</button>
+        <div class="eq-portrait sm" id="skPortrait"></div>
+        <div class="eq-who"><span id="skName"></span><span class="eq-job" id="skMp"></span></div>
+        <button class="eq-arrow" id="skNext">›</button>
+      </div>
+      <div class="sheet-hint" id="skHint">필드에서는 회복 마법만 사용할 수 있어요</div>
+      <div class="sheet-list" id="skList"></div>
+      <button class="sheet-close" id="skClose">뒤로</button>
+    </div>
+  </section>
+
+  <!-- ===== 아이템 사용 ===== -->
+  <section class="screen hidden" id="scItems">
+    <div class="sheet">
+      <div class="sheet-title">아이템</div>
+      <div class="sheet-hint" id="itHint">사용할 아이템을 선택하세요</div>
+      <div class="sheet-list" id="itList"></div>
+      <button class="sheet-close" id="itClose">뒤로</button>
     </div>
   </section>
 
@@ -1007,11 +1036,11 @@
   function renderGameMenu(){
     document.getElementById("menuGold").textContent = prog.gold;
     const loc = document.getElementById("menuLoc"); if (loc) loc.textContent = prog.bossDefeated ? "북부 숲길 (정화됨)" : "북부 숲길";
-    const cmds = [["status","📊 스테이터스"],["equip","🎒 장비"],["items","🧪 아이템"],["party","👥 배치"],["save","💾 저장"],["close","✖ 닫기"]];
+    const cmds = [["status","📊 스테이터스"],["skill","✨ 마법·스킬"],["equip","🎒 장비"],["items","🧪 아이템"],["party","👥 배치"],["save","💾 저장"],["close","✖ 닫기"]];
     const mc = document.getElementById("menuCmds"); mc.innerHTML = "";
     cmds.forEach(([k,l]) => { const b = document.createElement("button"); b.className = "mcmd";
       b.innerHTML = l + (k === "equip" && newItems.size ? ` <span class="m-new">NEW</span>` : "");
-      b.onclick = () => ({ status:()=>openStatus(), equip:()=>openEquip("weapon"), items:()=>openEquip("consumable"),
+      b.onclick = () => ({ status:()=>openStatus(), skill:()=>openSkill(), equip:()=>openEquip("weapon"), items:()=>openItems(),
         party:()=>openParty(), save:()=>openSlots("save","menu"), close:()=>resumeField() }[k]());
       mc.appendChild(b); });
     const mp = document.getElementById("menuParty"); mp.innerHTML = "";
@@ -1044,6 +1073,82 @@
       const id = h.equip[slot], it = id ? DB[id] : null;
       return `<div class="st-eqrow"><span class="se-lab">${EQ_LABEL[slot]}</span><span class="se-val">${it?`${it.icon} ${it.name}`:"—"}</span></div>`;
     }).join("");
+  }
+
+  /* ===== 마법 · 스킬 (보기 + 필드 회복) ===== */
+  let _skHero = 0, _skCast = null;
+  function openSkill(){ _skCast = null; renderSkill(); show("scSkill"); }
+  function renderSkill(){
+    const h = roster[_skHero];
+    document.getElementById("skPortrait").innerHTML = portraitHTML(h);
+    document.getElementById("skName").textContent = h.name;
+    document.getElementById("skMp").textContent = `${JOBS[h.key]||""} · MP ${h.mp}/${eStat(h,"maxMp")}`;
+    const list = document.getElementById("skList"); list.innerHTML = "";
+    const hint = document.getElementById("skHint");
+    if (_skCast){
+      hint.textContent = "회복할 대상을 선택하세요";
+      roster.forEach(t => { const row = document.createElement("button"); row.className = "invrow";
+        row.innerHTML = `<span class="iv-ic">${t.emoji}</span><span class="iv-info"><b>${t.name}</b><span class="iv-sub">HP ${t.hp}/${eStat(t,"maxHp")} · MP ${t.mp}/${eStat(t,"maxMp")}</span></span><span class="iv-act">회복</span>`;
+        row.onclick = () => castFieldHeal(h, _skCast, t); list.appendChild(row); });
+      const back = document.createElement("button"); back.className = "invrow inv-back"; back.innerHTML = `<span class="iv-info">‹ 능력 목록으로</span>`;
+      back.onclick = () => { _skCast = null; renderSkill(); }; list.appendChild(back);
+      return;
+    }
+    hint.textContent = "필드에서는 회복 마법만 사용할 수 있어요";
+    if (!h.abilities.length){ list.innerHTML = `<div class="inv-empty">배운 마법·스킬이 없어요</div>`; return; }
+    h.abilities.forEach(ab => {
+      const isFieldHeal = ab.kind === "heal" || (ab.kind === "summon" && ab.target === "allAllies");
+      const typeLabel = ab.kind === "summon" ? "소환" : ab.kind === "heal" ? "회복" : ab.kind === "mag" ? "마법" : "스킬";
+      const can = isFieldHeal && h.mp >= ab.mp;
+      const act = isFieldHeal ? (h.mp >= ab.mp ? "사용" : "MP부족") : "전투 전용";
+      const row = document.createElement("button"); row.className = "invrow";
+      row.innerHTML = `<span class="iv-ic">${ab.emo||"✨"}</span><span class="iv-info"><b>${ab.name}</b> <span class="sk-mp">MP ${ab.mp}</span><span class="iv-sub">${typeLabel}${ab.target==="allAllies"?" · 전체":ab.target==="allEnemies"?" · 적 전체":""}</span></span><span class="iv-act${can||!isFieldHeal?(can?"":" off"):" off"}">${act}</span>`;
+      if (isFieldHeal) row.onclick = () => { if (h.mp < ab.mp){ toast("MP가 부족해요"); return; } _skCast = ab; renderSkill(); };
+      else row.onclick = () => toast("전투에서만 사용할 수 있어요");
+      list.appendChild(row);
+    });
+  }
+  function castFieldHeal(caster, ab, target){
+    if (caster.mp < ab.mp){ toast("MP가 부족해요"); return; }
+    caster.mp -= ab.mp;
+    const targets = ab.target === "allAllies" ? roster : [target];
+    targets.forEach(t => { t.hp = Math.min(eStat(t,"maxHp"), t.hp + Math.round(eStat(caster,"mag")*2.4*ab.power)); });
+    SFX.heal(); autosave();
+    toast(ab.target === "allAllies" ? `${ab.name} — 파티 전체 회복!` : `${target.name} 회복!`);
+    _skCast = null; renderSkill();
+  }
+
+  /* ===== 아이템 사용 (필드 HP/MP 회복) ===== */
+  let _itPick = null;
+  function openItems(){ _itPick = null; renderItems(); show("scItems"); }
+  function renderItems(){
+    const list = document.getElementById("itList"); list.innerHTML = "";
+    const hint = document.getElementById("itHint");
+    if (_itPick){ const it = DB[_itPick];
+      hint.textContent = `${it.name} — 누구에게 사용할까요?`;
+      roster.forEach(t => { const row = document.createElement("button"); row.className = "invrow";
+        row.innerHTML = `<span class="iv-ic">${t.emoji}</span><span class="iv-info"><b>${t.name}</b><span class="iv-sub">HP ${t.hp}/${eStat(t,"maxHp")} · MP ${t.mp}/${eStat(t,"maxMp")}</span></span><span class="iv-act">사용</span>`;
+        row.onclick = () => useFieldItem(_itPick, t); list.appendChild(row); });
+      const back = document.createElement("button"); back.className = "invrow inv-back"; back.innerHTML = `<span class="iv-info">‹ 아이템 목록으로</span>`;
+      back.onclick = () => { _itPick = null; renderItems(); }; list.appendChild(back);
+      return;
+    }
+    hint.textContent = "사용할 아이템을 선택하세요";
+    const ids = Object.keys(items).filter(id => items[id] > 0 && DB[id] && DB[id].type === "consumable");
+    if (!ids.length){ list.innerHTML = `<div class="inv-empty">사용할 아이템이 없어요</div>`; return; }
+    ids.forEach(id => { const it = DB[id]; const row = document.createElement("button"); row.className = "invrow";
+      row.innerHTML = `<span class="iv-ic">${it.icon}</span><span class="iv-info"><b>${it.name}</b> ×${items[id]}<span class="iv-sub">${it.desc}</span></span><span class="iv-act">선택</span>`;
+      row.onclick = () => { _itPick = id; renderItems(); }; list.appendChild(row); });
+  }
+  function useFieldItem(id, target){
+    const it = DB[id]; if (!items[id]) return;
+    if (it.heal) target.hp = Math.min(eStat(target,"maxHp"), target.hp + it.heal);
+    if (it.mp)   target.mp = Math.min(eStat(target,"maxMp"), target.mp + it.mp);
+    items[id]--; if (items[id] <= 0) delete items[id];
+    SFX.item(); autosave();
+    toast(`${it.name} — ${target.name}`);
+    if (!items[id]) _itPick = null;
+    renderItems();
   }
 
   /* ===== 장비 / 인벤토리 (디아블로식 장비창) ===== */
@@ -1210,6 +1315,10 @@
   document.getElementById("eqNext").addEventListener("click", () => { _eqHero = (_eqHero + 1) % roster.length; renderEquip(); });
   document.getElementById("eqAuto").addEventListener("click", () => { autoBest(roster[_eqHero]); renderEquip(); });
   document.getElementById("stClose").addEventListener("click", () => backToMenu());
+  document.getElementById("skClose").addEventListener("click", () => backToMenu());
+  document.getElementById("skPrev").addEventListener("click", () => { _skHero = (_skHero - 1 + roster.length) % roster.length; _skCast = null; renderSkill(); });
+  document.getElementById("skNext").addEventListener("click", () => { _skHero = (_skHero + 1) % roster.length; _skCast = null; renderSkill(); });
+  document.getElementById("itClose").addEventListener("click", () => backToMenu());
   document.getElementById("shopClose").addEventListener("click", () => resumeField());
   document.getElementById("stPrev").addEventListener("click", () => { _stHero = (_stHero - 1 + roster.length) % roster.length; renderStatus(); });
   document.getElementById("stNext").addEventListener("click", () => { _stHero = (_stHero + 1) % roster.length; renderStatus(); });
