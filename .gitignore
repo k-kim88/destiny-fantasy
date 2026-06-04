@@ -21,6 +21,9 @@ ios/App/build/
 ios/.DS_Store
 DerivedData/
 
+# GitHub Pages build output
+_site/
+
 # Misc
 .DS_Store
 *.log
