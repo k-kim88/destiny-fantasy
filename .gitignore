@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Capacitor staged web output (generated from index.html by scripts/build-www.mjs)
+www/
+
+# Android build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/
+android/local.properties
+android/.idea/
+*.apk
+*.aab
+*.keystore
+
+# iOS build artifacts
+ios/App/Pods/
+ios/App/build/
+ios/.DS_Store
+DerivedData/
+
+# GitHub Pages build output
+_site/
+
+# Misc
+.DS_Store
+*.log
