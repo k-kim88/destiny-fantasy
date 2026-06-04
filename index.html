@@ -655,33 +655,63 @@
      STEP 2 — 필드(탐험): 타일 맵 · 이동 · 충돌 · 카메라
      ========================================================================= */
   // 0 풀, 1 나무(막힘), 2 물(막힘), 3 길, 4 꽃
-  const MAP = [
-    "1111111111111111",
-    "1000000000000001",
-    "1000011000000001",
-    "1000011000033001",
-    "1004000000033001",
-    "1000000000033001",
-    "1000000220033001",
-    "1000002220033001",
-    "1000002200033001",
-    "1000000000033001",
-    "1003333333333001",
-    "1003000000000001",
-    "1003000110000041",
-    "1003000110000001",
-    "1003000000000001",
-    "1003000000044001",
-    "1003000000044001",
-    "1000000000000001",
-    "1000011000001101",
-    "1000011000001101",
-    "1000000000000001",
-    "1111111111111111",
-  ].map(r => r.split("").map(Number));
-  const ROWS = MAP.length, COLS = MAP[0].length, TILE = 40;
+  const TILE = 40;
   const WALK = new Set([0, 3, 4]);
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const toTiles = a => a.map(r => r.split("").map(Number));
+  let MAP = [], COLS = 0, ROWS = 0, OBJS = [], cur = null;
+
+  // ===== 맵 레지스트리 (멀티 지역 + 던전) =====
+  const MAPS = {
+    woods: { id:"woods", name:"북부 숲길", kicker:"NORTHERN WOODS", theme:"forest", start:{c:8,r:4},
+      enemies:["슬라임","고블린","박쥐","독슬라임","최면술사"],
+      tiles: toTiles([
+        "1111111111111111","1000000000000001","1000011000000001","1000011000033001",
+        "1004000000033001","1000000000033001","1000000220033001","1000002220033001",
+        "1000002200033001","1000000000033001","1003333333333001","1003000000000001",
+        "1003000110000041","1003000110000001","1003000000000001","1003000000044001",
+        "1003000000044001","1000000000000001","1000011000001101","1000011000001101",
+        "1000000000000001","1111111111111111"]),
+      objs:[
+        { c:8,  r:2,  type:"npc",  solid:true, name:"마을 사람", lines:["여행자시군요. 북부 숲길엔 요즘 마물이 많아요.","동굴엔 강한 것들이 있으니 조심해요."] },
+        { c:12, r:11, type:"sign", solid:true, name:"표지판", lines:["🕳️ 좌상단 — 고대 동굴<br>🌾 남쪽 — 바람의 평원"] },
+        { c:5,  r:15, type:"chest", solid:true, name:"보물상자", opened:false, gold:120, loot:["sword","potion","potion"] },
+        { c:11, r:2,  type:"shop", solid:true, name:"행상인", lines:["무기와 물약, 천천히 둘러보게."] },
+        { c:8,  r:18, type:"boss", solid:true, bossId:"woodsGuardian", name:"고대 수호기사", lines:["…침입자여. 이 숲은 내가 지킨다.","각오해라!"] },
+        { c:8,  r:10, type:"spring", solid:true, name:"회복의 샘물" },
+        { c:11, r:17, type:"spring", solid:true, name:"회복의 샘물" },
+        { c:2,  r:2,  type:"exit", solid:true, name:"고대 동굴", icon:"🕳️", to:"cave",   spawn:{c:8,r:2} },
+        { c:8,  r:20, type:"exit", solid:true, name:"바람의 평원", icon:"🌾", to:"plains", spawn:{c:8,r:2} },
+      ] },
+    plains: { id:"plains", name:"바람의 평원", kicker:"WINDY PLAINS", theme:"plains", start:{c:8,r:2},
+      enemies:["늑대","고블린","도적","말벌","메두사"],
+      tiles: toTiles([
+        "1111111111111111","1000000000000001","1000000000000001","1001100000011001",
+        "1001100000011001","1000000000000001","1000033333000001","1000030000300001",
+        "1000030000300001","1000033333000001","1000000000000001","1001100000011001",
+        "1001100000011001","1000000000000001","1000000000000001","1111111111111111"]),
+      objs:[
+        { c:8,  r:2,  type:"exit", solid:true, name:"북부 숲길", icon:"🌳", to:"woods", spawn:{c:8,r:19} },
+        { c:3,  r:8,  type:"shop", solid:true, name:"행상인", lines:["평원에도 행상인이 있지. 좋은 게 들어왔다네."] },
+        { c:12, r:8,  type:"spring", solid:true, name:"회복의 샘물" },
+        { c:13, r:12, type:"chest", solid:true, name:"보물상자", opened:false, gold:220, loot:["robe","hipotion","ether"] },
+        { c:8,  r:14, type:"exit", solid:true, name:"동굴 깊은 길", icon:"🕳️", to:"cave", spawn:{c:8,r:13} },
+      ] },
+    cave: { id:"cave", name:"고대 동굴", kicker:"ANCIENT CAVE", theme:"cave", start:{c:8,r:2},
+      enemies:["스켈레톤","임프","박쥐","마녀","골렘"],
+      tiles: toTiles([
+        "1111111111111111","1000000000000001","1000000000000001","1011011011011001",
+        "1000000000000001","1001101101100101","1000000000000001","1011011011011001",
+        "1000000000000001","1001101101100101","1000000000000001","1011011011011001",
+        "1000000000000001","1000000000000001","1000000000000001","1111111111111111"]),
+      objs:[
+        { c:8,  r:1,  type:"exit", solid:true, name:"바깥으로", icon:"🌳", to:"woods", spawn:{c:2,r:3} },
+        { c:2,  r:14, type:"chest", solid:true, name:"보물상자", opened:false, gold:300, loot:["plate","remedy","hipotion"] },
+        { c:13, r:14, type:"chest", solid:true, name:"숨겨진 상자", opened:false, gold:400, loot:["amulet","greatsword"] },
+        { c:8,  r:13, type:"spring", solid:true, name:"회복의 샘물" },
+        { c:8,  r:6,  type:"boss", solid:true, bossId:"caveLord", name:"동굴의 군주", lines:["크르르… 여기까지 온 자는 오랜만이군.","살아 나갈 수 있을 것 같으냐?"] },
+      ] },
+  };
 
   const cv = $("#fieldCanvas");
   const cx = cv.getContext("2d");
@@ -699,22 +729,18 @@
   const joy  = { active:false, x:0, y:0, id:null, cxp:0, cyp:0 };        // 가상 조이스틱(-1..1)
   const cam = { x: 0, y: 0 };
 
-  // ===== 상호작용 오브젝트 (NPC · 표지판 · 보물상자) =====
-  const OBJS = [
-    { c:8,  r:2,  type:"npc",  solid:true, name:"마을 사람",
-      lines:["여행자시군요. 이 북부 숲길엔 요즘 마물이 자주 나와요.",
-             "조심해서 가세요, 크루세이더."] },
-    { c:12, r:11, type:"sign", solid:true, name:"표지판",
-      lines:["▲ 북 — 옛 성터 / ▼ 남 — 마을<br>“길을 잃으면 별을 보라.”"] },
-    { c:5,  r:15, type:"chest", solid:true, name:"보물상자",
-      opened:false, gold:120, loot:["sword","potion","potion"] },
-    { c:11, r:2,  type:"shop", solid:true, name:"행상인",
-      lines:["무기와 물약, 필요한 게 있나? 천천히 둘러보게."] },
-    { c:8,  r:18, type:"boss", solid:true, name:"고대 수호기사",
-      lines:["…침입자여. 이 숲은 내가 지킨다.", "돌아갈 생각이라면 지금이다. ……아니라면, 각오해라!"] },
-    { c:8,  r:10, type:"spring", solid:true, name:"회복의 샘물" },
-    { c:11, r:17, type:"spring", solid:true, name:"회복의 샘물" },
-  ];
+  function setLoc(){ if (!cur) return;
+    const k = document.querySelector("#scField .hud .kick"), l = document.querySelector("#scField .hud .loc");
+    if (k) k.textContent = cur.kicker; if (l) l.textContent = cur.name;
+    const ml = document.getElementById("menuLoc"); if (ml) ml.textContent = cur.name; }
+  function loadMap(id, spawn){
+    cur = MAPS[id]; MAP = cur.tiles; ROWS = MAP.length; COLS = MAP[0].length; OBJS = cur.objs;
+    const s = spawn || cur.start;
+    player.x = s.c*TILE + TILE/2; player.y = s.r*TILE + TILE*0.6; player.face = 1;
+    _enc = 0; _encNext = TILE*5; setLoc();
+  }
+  function travelTo(id, spawn){ stopField(); loadMap(id, spawn); resumeField(); toast(MAPS[id].name); }
+
   const objWX = (o) => o.c * TILE + TILE / 2;        // 중심 x
   const objFY = (o) => o.r * TILE + TILE;            // 발치 y(바닥선)
   function solidHit(px, py){
@@ -766,8 +792,10 @@
     } else if (o.type === "shop"){
       openDialog(o.name, o.lines, () => { stopField(); openShop(); });
     } else if (o.type === "boss"){
-      if (prog.bossDefeated){ openDialog(o.name, ["…더 이상 싸울 이유는 없다."]); return; }
+      if (prog.bosses[o.bossId]){ openDialog(o.name, ["…더 이상 싸울 이유는 없다."]); return; }
       openDialog(o.name, o.lines, () => startBoss(o));
+    } else if (o.type === "exit"){
+      openDialog(o.name, [`${o.name}(으)로 이동할까요?`], () => travelTo(o.to, o.spawn));
     } else if (o.type === "spring"){
       roster.forEach(t => { t.hp = eStat(t,"maxHp"); t.mp = eStat(t,"maxMp"); cureAll(t); });
       SFX.heal(); autosave();
@@ -842,22 +870,31 @@
     cx.fillStyle = "#0d1a14"; cx.fillRect(0, 0, VW, VH);
     const c0 = Math.max(0, Math.floor(cam.x/TILE)), c1 = Math.min(COLS-1, Math.ceil((cam.x+VW)/TILE));
     const r0 = Math.max(0, Math.floor(cam.y/TILE)), r1 = Math.min(ROWS-1, Math.ceil((cam.y+VH)/TILE));
+    const theme = cur ? cur.theme : "forest";
+    const gA = theme === "plains" ? "#3a6b3e" : "#2f5a32", gB = theme === "plains" ? "#42814a" : "#346134";
     // 바닥 타일
     for (let r=r0; r<=r1; r++) for (let c=c0; c<=c1; c++){
       const tile = MAP[r][c], x = c*TILE-cam.x, y = r*TILE-cam.y;
-      if (tile === 2){ cx.fillStyle = "#1d4e8c"; cx.fillRect(x,y,TILE,TILE);
-        cx.fillStyle = "rgba(190,225,240,.12)"; cx.fillRect(x+4, y+TILE*0.4+Math.sin(t*0.003+c)*2, TILE-8, 1); }
-      else if (tile === 3){ cx.fillStyle = "#7a6243"; cx.fillRect(x,y,TILE,TILE); }
-      else { cx.fillStyle = ((r+c)&1) ? "#2f5a32" : "#346134"; cx.fillRect(x,y,TILE,TILE); }
-      if (tile === 4){ cx.fillStyle = "#e6c074"; cx.beginPath(); cx.arc(x+TILE*0.5, y+TILE*0.5, 3, 0, 7); cx.fill();
-        cx.fillStyle = "#d97fae"; cx.beginPath(); cx.arc(x+TILE*0.32, y+TILE*0.62, 2.4, 0, 7); cx.fill(); }
+      if (theme === "cave"){
+        if (tile === 2){ cx.fillStyle = "#07070d"; cx.fillRect(x,y,TILE,TILE); }
+        else if (tile === 1){ cx.fillStyle = "#15151d"; cx.fillRect(x,y,TILE,TILE); }
+        else { cx.fillStyle = ((r+c)&1) ? "#34343e" : "#2c2c35"; cx.fillRect(x,y,TILE,TILE);
+          cx.fillStyle = "rgba(0,0,0,.18)"; cx.fillRect(x, y, TILE, 1); }
+      } else {
+        if (tile === 2){ cx.fillStyle = "#1d4e8c"; cx.fillRect(x,y,TILE,TILE);
+          cx.fillStyle = "rgba(190,225,240,.12)"; cx.fillRect(x+4, y+TILE*0.4+Math.sin(t*0.003+c)*2, TILE-8, 1); }
+        else if (tile === 3){ cx.fillStyle = "#7a6243"; cx.fillRect(x,y,TILE,TILE); }
+        else { cx.fillStyle = ((r+c)&1) ? gA : gB; cx.fillRect(x,y,TILE,TILE); }
+        if (tile === 4){ cx.fillStyle = "#e6c074"; cx.beginPath(); cx.arc(x+TILE*0.5, y+TILE*0.5, 3, 0, 7); cx.fill();
+          cx.fillStyle = "#d97fae"; cx.beginPath(); cx.arc(x+TILE*0.32, y+TILE*0.62, 2.4, 0, 7); cx.fill(); }
+      }
     }
-    // 깊이 정렬: 나무 + 상호작용 오브젝트 + 플레이어
+    // 깊이 정렬: 나무/벽 + 상호작용 오브젝트 + 플레이어
     const items = [];
     for (let r=r0; r<=r1+1; r++) for (let c=c0; c<=c1; c++){
       if (r<0||r>=ROWS||MAP[r][c]!==1) continue;
       const wx = c*TILE+TILE/2, wy = r*TILE+TILE;
-      items.push({ fy:wy, draw:()=>drawTree(wx-cam.x, wy-cam.y) });
+      items.push({ fy:wy, draw:()=> theme === "cave" ? drawWall(wx-cam.x, wy-cam.y) : drawTree(wx-cam.x, wy-cam.y) });
     }
     for (const o of OBJS) items.push({ fy:objFY(o), draw:()=>drawObj(o) });
     items.push({ fy:player.y, draw:()=>drawPlayer(player.x-cam.x, player.y-cam.y) });
@@ -882,6 +919,13 @@
     cx.fillStyle = "#4d8a4f"; cx.beginPath(); cx.arc(sx-TILE*0.18, sy-TILE*1.2, TILE*0.2, 0, 7); cx.fill();
   }
 
+  function drawWall(sx, sy){
+    cx.fillStyle = "rgba(0,0,0,.3)"; cx.beginPath(); cx.ellipse(sx, sy-2, TILE*0.34, TILE*0.12, 0, 0, 7); cx.fill();
+    cx.fillStyle = "#3c3c46"; cx.fillRect(sx-TILE*0.42, sy-TILE*1.0, TILE*0.84, TILE*1.0);
+    cx.fillStyle = "#4a4a56"; cx.fillRect(sx-TILE*0.42, sy-TILE*1.0, TILE*0.84, TILE*0.18);
+    cx.fillStyle = "#2a2a32"; cx.fillRect(sx-TILE*0.42, sy-TILE*0.34, TILE*0.84, TILE*0.34);
+    cx.fillStyle = "rgba(0,0,0,.25)"; cx.fillRect(sx-2, sy-TILE*0.9, 4, TILE*0.8);
+  }
   function shadow(sx, sy, w){ cx.fillStyle = "rgba(0,0,0,.26)"; cx.beginPath(); cx.ellipse(sx, sy-2, w, w*0.4, 0, 0, 7); cx.fill(); }
 
   function drawObj(o){
@@ -891,7 +935,8 @@
     else if (o.type === "chest") drawChest(sx, sy, o.opened);
     else if (o.type === "shop") drawEmoObj(sx, sy, "🛒", TILE*0.2);
     else if (o.type === "spring") drawSpring(sx, sy);
-    else if (o.type === "boss") drawEmoObj(sx, sy, (prog.bossDefeated ? "🪦" : "🐲"), TILE*0.28, !prog.bossDefeated);
+    else if (o.type === "exit") drawEmoObj(sx, sy, o.icon || "🚪", TILE*0.2);
+    else if (o.type === "boss"){ const dead = prog.bosses[o.bossId]; drawEmoObj(sx, sy, dead ? "🪦" : (BOSSES[o.bossId]?BOSSES[o.bossId].emoji:"🐲"), TILE*0.28, !dead); }
   }
   function drawSpring(sx, sy){
     const p = 0.5 + 0.5*Math.sin(t*0.004);
@@ -973,7 +1018,7 @@
   function resumeField(){      // 필드로 (전투/대화 후 이어서)
     show("scField");
     sizeCanvas();
-    updateGold();
+    updateGold(); setLoc();
     running = true; last = performance.now();
     cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
     autosave();           // 전투/이벤트 후 자동 저장
@@ -986,21 +1031,25 @@
   const SLOTS = ["1","2","3","4","5"];
   const slotKey = s => "dc_slot_" + s;
   function snapshot(){
+    const chests = {};
+    Object.keys(MAPS).forEach(id => { chests[id] = MAPS[id].objs.map(o => o.type === "chest" ? !!o.opened : null); });
     return {
-      px: player.x, py: player.y, face: player.face, gold: prog.gold, boss: !!prog.bossDefeated, items,
+      map: cur ? cur.id : "woods", px: player.x, py: player.y, face: player.face,
+      gold: prog.gold, bosses: { ...prog.bosses }, items,
       roster: roster.map(h => ({ key:h.key, lv:h.lv, exp:h.exp, expNext:h.expNext, row:h.row,
         maxHp:h.maxHp, maxMp:h.maxMp, atk:h.atk, def:h.def, mag:h.mag, spd:h.spd, hp:h.hp, mp:h.mp, equip:{...h.equip}, st:{...h.st} })),
-      chests: OBJS.map(o => o.type === "chest" ? !!o.opened : null),
+      chests,
     };
   }
   function applySnapshot(s){
     resetGame();
-    player.x = s.px; player.y = s.py; player.face = s.face || 1;
     if (s.gold != null) prog.gold = s.gold;
-    prog.bossDefeated = !!s.boss;
+    prog.bosses = s.bosses || {};
     if (s.items) items = s.items;
     if (Array.isArray(s.roster)) s.roster.forEach(sv => { const h = roster.find(x => x.key === sv.key); if (h) Object.assign(h, sv); });
-    if (Array.isArray(s.chests)) s.chests.forEach((op, i) => { if (op !== null && OBJS[i]) OBJS[i].opened = !!op; });
+    if (s.chests) Object.keys(s.chests).forEach(id => { if (MAPS[id]) s.chests[id].forEach((op, i) => { if (op !== null && MAPS[id].objs[i]) MAPS[id].objs[i].opened = !!op; }); });
+    loadMap(s.map || "woods");
+    player.x = s.px; player.y = s.py; player.face = s.face || 1;
   }
   function slotMeta(s){ try{ const raw = localStorage.getItem(slotKey(s)); return raw ? (JSON.parse(raw).meta || {}) : null; } catch(e){ return null; } }
   function hasAnySave(){ try{ return ["auto", ...SLOTS].some(s => localStorage.getItem(slotKey(s))); } catch(e){ return false; } }
@@ -1050,7 +1099,7 @@
   const ROW_BADGE = { front:"전열", back:"후열", reserve:"대기" };
   function renderGameMenu(){
     document.getElementById("menuGold").textContent = prog.gold;
-    const loc = document.getElementById("menuLoc"); if (loc) loc.textContent = prog.bossDefeated ? "북부 숲길 (정화됨)" : "북부 숲길";
+    const loc = document.getElementById("menuLoc"); if (loc) loc.textContent = cur ? cur.name : "북부 숲길";
     const cmds = [["status","📊 스테이터스"],["skill","✨ 마법·스킬"],["equip","🎒 장비"],["items","🧪 아이템"],["party","👥 배치"],["save","💾 저장"],["close","✖ 닫기"]];
     const mc = document.getElementById("menuCmds"); mc.innerHTML = "";
     cmds.forEach(([k,l]) => { const b = document.createElement("button"); b.className = "mcmd";
@@ -1424,6 +1473,7 @@
     shield:  { name:"강철 방패", type:"shield", icon:"🛡️", bonus:{def:6},         price:150, desc:"방어 +6" },
     venomdagger:{ name:"독아 단검", type:"weapon", icon:"🗡️", bonus:{atk:5,spd:1}, inflict:{poison:.3}, price:230, desc:"공격 +5, 속도 +1 · 독 부여" },
     palsymace:  { name:"마비 철퇴", type:"weapon", icon:"🔨", bonus:{atk:9},        inflict:{paralyze:.25}, price:280, desc:"공격 +9 · 마비 부여" },
+    dragonslayer:{ name:"용살자 대검", type:"weapon", icon:"⚔️", bonus:{atk:18,maxHp:20}, price:1500, desc:"공격 +18, HP +20" },
     ring:    { name:"힘의 반지", type:"accessory", icon:"💍", bonus:{atk:3,maxHp:8}, price:140, desc:"공격 +3, HP +8" },
     amulet:  { name:"수호 부적", type:"accessory", icon:"📿", bonus:{def:3,maxMp:10}, price:140, desc:"방어 +3, MP +10" },
   };
@@ -1446,26 +1496,37 @@
     { name:"최면술사", emoji:"🧞", maxHp:40, atk:14, def:5, spd:12, exp:16, gold:14, drops:[{id:"ether",chance:.3}],   inflict:{sleep:.4} },
     { name:"메두사",   emoji:"🐍", maxHp:62, atk:19, def:7, spd:11, exp:24, gold:20, drops:[{id:"remedy",chance:.15},{id:"amulet",chance:.05}], inflict:{paralyze:.4} },
     { name:"마녀",     emoji:"🧙‍♀️", maxHp:48, atk:15, def:5, spd:13, exp:18, gold:16, drops:[{id:"cap",chance:.06}], inflict:{silence:.4} },
+    // 평원 몬스터
+    { name:"도적",     emoji:"🥷", maxHp:50, atk:18, def:5, spd:14, exp:16, gold:24, drops:[{id:"potion",chance:.3},{id:"bow",chance:.05}] },
+    { name:"말벌",     emoji:"🐝", maxHp:30, atk:15, def:3, spd:17, exp:11, gold:8,  drops:[{id:"antidote",chance:.2}] },
+    // 동굴 몬스터
+    { name:"스켈레톤", emoji:"💀", maxHp:58, atk:21, def:8, spd:10, exp:22, gold:16, drops:[{id:"sword",chance:.1},{id:"potion",chance:.3}] },
+    { name:"임프",     emoji:"👿", maxHp:42, atk:18, def:5, spd:14, exp:18, gold:14, drops:[{id:"ether",chance:.3}] },
+    { name:"골렘",     emoji:"🗿", maxHp:120, atk:25, def:17, spd:6, exp:44, gold:42, drops:[{id:"plate",chance:.12},{id:"shield",chance:.1}] },
   ];
-  const BOSS = { name:"고대 수호기사", emoji:"🐲", maxHp:620, atk:34, def:14, spd:11, exp:240, gold:350, boss:true,
-    drops:[{id:"greatsword",chance:1},{id:"amulet",chance:1},{id:"hipotion",chance:1},{id:"remedy",chance:1}] };
+  const MONS = {}; ENEMY_DEF.forEach(e => MONS[e.name] = e);
+  const BOSSES = {
+    woodsGuardian: { name:"고대 수호기사", emoji:"🐲", maxHp:620, atk:34, def:14, spd:11, exp:240, gold:350, boss:true,
+      drops:[{id:"greatsword",chance:1},{id:"amulet",chance:1},{id:"hipotion",chance:1},{id:"remedy",chance:1}] },
+    caveLord: { name:"동굴의 군주", emoji:"👹", maxHp:1150, atk:46, def:22, spd:12, exp:520, gold:800, boss:true,
+      drops:[{id:"dragonslayer",chance:1},{id:"remedy",chance:1},{id:"hipotion",chance:1}] },
+  };
   let roster = [], party = [], enemies = [], items = DEFAULT_INV();
   const newItems = new Set();                 // 새로 얻은 아이템(가방에서 NEW 표시)
   function addNew(id){ newItems.add(id); }
-  let prog = { gold:120, bossDefeated:false };
+  let prog = { gold:120, bosses:{} };
   let _bossObj = null;
   let B = null, _enc = 0, _encNext = TILE * 5, _acting = null;
 
   const battleParty = () => roster.filter(h => h.row !== "reserve");
 
   function resetGame(){
-    player.x = START.x; player.y = START.y; player.face = 1;
     roster = ROSTER_DEF.map(mkHero);
     party = [];
     items = DEFAULT_INV();
-    prog = { gold:120, bossDefeated:false };
-    OBJS.forEach(o => { if (o.type === "chest") o.opened = false; });
-    _enc = 0; _encNext = TILE * 5;
+    prog = { gold:120, bosses:{} };
+    Object.values(MAPS).forEach(m => m.objs.forEach(o => { if (o.type === "chest") o.opened = false; }));
+    loadMap("woods");
   }
 
   // ---- DOM helpers ----
@@ -1714,7 +1775,7 @@
     roster.forEach(h => { const b0 = h.lv; const amt = h.row === "reserve" ? Math.round(exp*0.7) : exp; if (gainExp(h, amt)) ups.push({ emoji:h.emoji, name:h.name, from:b0, to:h.lv }); });
     const expList = party.map(h => { const b = before.get(h); return { emoji:h.emoji, name:h.name, lv0:b.lv, lvNow:h.lv, r0:b.r, rNow: h.exp/h.expNext }; });
     party.forEach(updateBattler);
-    if (isBoss) prog.bossDefeated = true;
+    if (isBoss && B && B.bossId) prog.bosses[B.bossId] = true;
     setLog(isBoss ? "보스를 쓰러뜨렸다!" : "전투에서 승리했다!");
     SFX.win();
     await delay(700);
@@ -1765,9 +1826,10 @@
   function startBattle(){
     stopField();
     party = battleParty();                 // 출전 파티(전열/후열, 최대 6)
+    const pool = (cur && cur.enemies && cur.enemies.length) ? cur.enemies : Object.keys(MONS);
     const n = 1 + Math.floor(Math.random()*3);
     enemies = [];
-    for (let i = 0; i < n; i++){ const d = ENEMY_DEF[Math.floor(Math.random()*ENEMY_DEF.length)];
+    for (let i = 0; i < n; i++){ const d = MONS[pool[Math.floor(Math.random()*pool.length)]];
       enemies.push({ ...d, side:"enemy", hp:d.maxHp, mp:0, st:{}, defending:false, stun:false, el:null }); }
     // 동명 적 구분(A/B/C)
     const cnt = {}; enemies.forEach(e => cnt[e.name] = (cnt[e.name]||0)+1);
@@ -1781,12 +1843,13 @@
   function startBoss(o){
     stopField();
     _bossObj = o || null;
+    const def = BOSSES[o.bossId] || BOSSES.woodsGuardian;
     party = battleParty();
-    enemies = [ { ...BOSS, side:"enemy", hp:BOSS.maxHp, mp:0, st:{}, defending:false, stun:false, el:null, label:BOSS.name } ];
+    enemies = [ { ...def, side:"enemy", hp:def.maxHp, mp:0, st:{}, defending:false, stun:false, el:null, label:def.name } ];
     buildBattlers();
     show("scBattle"); SFX.encounter();
-    setLog(`${BOSS.name}이(가) 앞을 가로막는다!`);
-    B = { on:true, boss:true };
+    setLog(`${def.name}이(가) 앞을 가로막는다!`);
+    B = { on:true, boss:true, bossId:o.bossId };
     battleLoop();
   }
 
