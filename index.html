@@ -100,6 +100,9 @@
   .hud-back{position:absolute; top:14px; right:14px; z-index:10;
     background:var(--panel); border:1px solid var(--gold-line); color:var(--gold);
     font-size:13px; padding:7px 12px; border-radius:9px; cursor:pointer;}
+  .hud-save{position:absolute; top:52px; right:14px; z-index:10;
+    background:var(--panel); border:1px solid var(--gold-line); color:var(--gold);
+    font-size:12px; padding:6px 11px; border-radius:9px; cursor:pointer;}
 
   /* 가상 조이스틱 (떠다니는 방식 · 반투명) — 누른 자리에 생성 */
   #joyBase{position:absolute; z-index:10; width:148px; height:148px; border-radius:50%;
@@ -218,6 +221,7 @@
     <canvas id="fieldCanvas"></canvas>
     <div class="hud"><div class="kick">NORTHERN WOODS</div><div class="loc">북부 숲길</div></div>
     <button class="hud-back" data-a="back">타이틀 ›</button>
+    <button class="hud-save" id="btnSave">💾 저장</button>
     <div id="joyBase"><div id="joyKnob"></div></div>
     <button id="aBtn">A</button>
     <div id="dialog" class="hidden">
@@ -274,14 +278,16 @@
 
   // 타이틀 메뉴
   $$("#scTitle .item").forEach(btn => btn.addEventListener("click", () => {
+    if (btn.classList.contains("disabled")) return;
     const a = btn.dataset.a;
     if (a === "new")       startField();
-    else if (a === "cont") toast("저장된 모험이 아직 없어요");
+    else if (a === "cont"){ if (loadGame()){ resumeField(); toast("불러왔습니다"); } else toast("저장된 모험이 없어요"); }
     else if (a === "settings") openPlaceholder("설정", "사운드 · 언어 등 설정을 다음 단계에서 추가합니다.");
   }));
+  function refreshTitle(){ const c = document.querySelector('#scTitle .item[data-a="cont"]'); if (c) c.classList.toggle("disabled", !hasSave()); }
 
   // 뒤로
-  $$('[data-a="back"]').forEach(b => b.addEventListener("click", () => { stopField(); show("scTitle"); }));
+  $$('[data-a="back"]').forEach(b => b.addEventListener("click", () => { stopField(); refreshTitle(); show("scTitle"); }));
 
   /* =========================================================================
      STEP 2 — 필드(탐험): 타일 맵 · 이동 · 충돌 · 카메라
@@ -383,7 +389,7 @@
     player.face = (objWX(o) > player.x) ? 1 : -1;
     if (o.type === "chest"){
       if (o.opened){ openDialog(o.name, ["텅 비어 있다."]); return; }
-      o.opened = true;
+      o.opened = true; saveGame(true);
       openDialog(o.name, ["보물상자를 열었다!", `${o.item} 와(과) 골드 ${o.gold} 을(를) 얻었다.`]);
     } else {
       openDialog(o.name, o.lines);
@@ -564,15 +570,49 @@
   function startField(){      // 새 게임 — 상태 초기화
     resetGame();
     resumeField();
+    saveGame(true);           // 새 게임 시작 즉시 저장(이어하기 가능)
   }
   function resumeField(){      // 필드로 (전투/대화 후 이어서)
     show("scField");
     sizeCanvas();
     running = true; last = performance.now();
     cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+    saveGame(true);           // 전투/이벤트 후 자동 저장
   }
   function stopField(){ running = false; cancelAnimationFrame(raf); clearInput(); }
   function clearInput(){ keys.up=keys.down=keys.left=keys.right=false; hideJoy(); }
+
+  /* ===== 저장 / 이어하기 ===== */
+  const SAVE_KEY = "dc_save_v1";
+  function hasSave(){ try { return !!localStorage.getItem(SAVE_KEY); } catch(e){ return false; } }
+  function saveGame(silent){
+    if (!party.length) return false;     // 진행 중인 게임이 없으면 저장 안 함
+    try{
+      const snap = {
+        px: player.x, py: player.y, face: player.face,
+        party: party.map(h => ({ hp:h.hp, mp:h.mp, maxHp:h.maxHp, maxMp:h.maxMp, atk:h.atk, def:h.def, mag:h.mag, spd:h.spd })),
+        items, prog,
+        chests: OBJS.map(o => o.type === "chest" ? !!o.opened : null),
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
+      refreshTitle();
+      if (!silent) toast("저장되었습니다");
+      return true;
+    } catch(e){ if (!silent) toast("저장 실패"); return false; }
+  }
+  function loadGame(){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY); if (!raw) return false;
+      const s = JSON.parse(raw);
+      resetGame();
+      player.x = s.px; player.y = s.py; player.face = s.face || 1;
+      if (Array.isArray(s.party)) s.party.forEach((sv, i) => { if (party[i]) Object.assign(party[i], sv); });
+      if (s.items) items = s.items;
+      if (s.prog)  prog  = s.prog;
+      if (Array.isArray(s.chests)) s.chests.forEach((op, i) => { if (op !== null && OBJS[i]) OBJS[i].opened = !!op; });
+      return true;
+    } catch(e){ return false; }
+  }
 
   // ===== 떠다니는 가상 조이스틱 (캔버스 아무 곳이나 누르면 그 자리에 생성) =====
   const app = $("#app"), joyBase = $("#joyBase"), joyKnob = $("#joyKnob"), JOY_R = 58;
@@ -612,6 +652,7 @@
   document.addEventListener("keyup",   e => { if (KEY[e.key]) keys[KEY[e.key]] = false; });
 
   $("#aBtn").addEventListener("click", () => pressA());
+  document.getElementById("btnSave").addEventListener("click", () => saveGame(false));
   // 대화창 어디든 탭하면 다음으로
   document.getElementById("dialog").addEventListener("pointerdown", e => { e.preventDefault(); advanceDialog(); });
   window.addEventListener("resize", () => { if (running) sizeCanvas(); });
@@ -815,7 +856,7 @@
     party.forEach(updateBattler); setLog(msg);
     await delay(lv ? 1900 : 1450); B = null; resumeField();
   }
-  async function defeat(){ clearMenu(); setLog("파티가 전멸했다…"); await delay(1700); B = null; show("scTitle"); }
+  async function defeat(){ clearMenu(); setLog("파티가 전멸했다…"); await delay(1700); B = null; refreshTitle(); show("scTitle"); }
 
   function startBattle(){
     stopField();
@@ -833,6 +874,7 @@
     battleLoop();
   }
 
+  refreshTitle();
   show("scTitle");
 </script>
 </body>
