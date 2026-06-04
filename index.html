@@ -302,6 +302,10 @@
   @keyframes spk{0%{opacity:0; transform:translate(-50%,-50%) scale(.4)} 40%{opacity:1} 100%{opacity:0; transform:translate(-50%,-50%) scale(1.6)}}
   .stun{position:absolute; top:-16px; left:50%; font-size:18px; animation:spin 1s linear infinite;}
   @keyframes spin{to{transform:translate(-50%,0) rotate(360deg)} from{transform:translate(-50%,0) rotate(0)}}
+  .battler.boss .spr{font-size:76px;}
+  .battler.boss .bhp{visibility:hidden;}
+  .battler.boss.revealed .bhp{visibility:visible;}
+  .bosslabel{font-size:11px; color:#ff8a7a; margin-top:2px; font-family:var(--serif); letter-spacing:.05em;}
   .bt-log{width:100%; padding:11px 16px; min-height:46px; color:var(--ink); font-size:14px; line-height:1.45;
     background:rgba(9,14,32,.93); border-top:1px solid var(--gold-line);}
   .bt-menu{width:100%; padding:10px 14px 18px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; min-height:62px;}
@@ -435,6 +439,17 @@
     </div>
   </section>
 
+  <!-- ===== 상점 ===== -->
+  <section class="screen hidden" id="scShop">
+    <div class="sheet">
+      <div class="sheet-title">행상인</div>
+      <div class="eq-actions"><span class="eq-gold">🪙 골드 <span id="shopGold">0</span></span></div>
+      <div class="eq-tabs" id="shopTabs"></div>
+      <div class="sheet-list" id="shopList"></div>
+      <button class="sheet-close" id="shopClose">닫기</button>
+    </div>
+  </section>
+
   <!-- ===== 임시(다음 단계) 화면 ===== -->
   <section class="screen hidden" id="scPlaceholder">
     <div class="logo"><span class="word small">DESTINY</span></div>
@@ -538,6 +553,10 @@
       lines:["▲ 북 — 옛 성터 / ▼ 남 — 마을<br>“길을 잃으면 별을 보라.”"] },
     { c:5,  r:15, type:"chest", solid:true, name:"보물상자",
       opened:false, gold:120, loot:["sword","potion","potion"] },
+    { c:11, r:2,  type:"shop", solid:true, name:"행상인",
+      lines:["무기와 물약, 필요한 게 있나? 천천히 둘러보게."] },
+    { c:8,  r:18, type:"boss", solid:true, name:"고대 수호기사",
+      lines:["…침입자여. 이 숲은 내가 지킨다.", "돌아갈 생각이라면 지금이다. ……아니라면, 각오해라!"] },
   ];
   const objWX = (o) => o.c * TILE + TILE / 2;        // 중심 x
   const objFY = (o) => o.r * TILE + TILE;            // 발치 y(바닥선)
@@ -587,6 +606,11 @@
       updateGold(); autosave();
       const lootText = names.length ? names.join(", ") + " 와(과) " : "";
       openDialog(o.name, ["보물상자를 열었다!", `${lootText}골드 ${o.gold} 을(를) 얻었다.`]);
+    } else if (o.type === "shop"){
+      openDialog(o.name, o.lines, () => { stopField(); openShop(); });
+    } else if (o.type === "boss"){
+      if (prog.bossDefeated){ openDialog(o.name, ["…더 이상 싸울 이유는 없다."]); return; }
+      openDialog(o.name, o.lines, () => startBoss(o));
     } else {
       openDialog(o.name, o.lines);
     }
@@ -704,6 +728,15 @@
     if (o.type === "npc") drawNPC(sx, sy);
     else if (o.type === "sign") drawSign(sx, sy);
     else if (o.type === "chest") drawChest(sx, sy, o.opened);
+    else if (o.type === "shop") drawEmoObj(sx, sy, "🛒", TILE*0.2);
+    else if (o.type === "boss") drawEmoObj(sx, sy, (prog.bossDefeated ? "🪦" : "🐲"), TILE*0.28, !prog.bossDefeated);
+  }
+  function drawEmoObj(sx, sy, emo, sh, glow){
+    shadow(sx, sy, sh);
+    if (glow){ const p = 0.5+0.5*Math.sin(_t*0.005); cx.fillStyle = `rgba(220,60,42,${0.15+0.25*p})`; cx.beginPath(); cx.arc(sx, sy-TILE*0.5, TILE*0.5, 0, 7); cx.fill(); }
+    cx.font = `${Math.round(TILE*0.95)}px serif`; cx.textAlign = "center"; cx.textBaseline = "alphabetic";
+    cx.fillText(emo, sx, sy);
+    cx.textAlign = "left";
   }
   function drawNPC(sx, sy){
     shadow(sx, sy, TILE*0.22);
@@ -785,7 +818,7 @@
   const slotKey = s => "dc_slot_" + s;
   function snapshot(){
     return {
-      px: player.x, py: player.y, face: player.face, gold: prog.gold, items,
+      px: player.x, py: player.y, face: player.face, gold: prog.gold, boss: !!prog.bossDefeated, items,
       roster: roster.map(h => ({ key:h.key, lv:h.lv, exp:h.exp, expNext:h.expNext, row:h.row,
         maxHp:h.maxHp, maxMp:h.maxMp, atk:h.atk, def:h.def, mag:h.mag, spd:h.spd, hp:h.hp, mp:h.mp, equip:{...h.equip} })),
       chests: OBJS.map(o => o.type === "chest" ? !!o.opened : null),
@@ -795,6 +828,7 @@
     resetGame();
     player.x = s.px; player.y = s.py; player.face = s.face || 1;
     if (s.gold != null) prog.gold = s.gold;
+    prog.bossDefeated = !!s.boss;
     if (s.items) items = s.items;
     if (Array.isArray(s.roster)) s.roster.forEach(sv => { const h = roster.find(x => x.key === sv.key); if (h) Object.assign(h, sv); });
     if (Array.isArray(s.chests)) s.chests.forEach((op, i) => { if (op !== null && OBJS[i]) OBJS[i].opened = !!op; });
@@ -946,6 +980,33 @@
     });
   }
 
+  /* ===== 상점 (구매 / 판매) ===== */
+  const SHOP_STOCK = ["potion","hipotion","ether","sword","greatsword","staff","bow","helm","cap","plate","robe","gloves","boots","shield","ring","amulet"];
+  let _shopTab = "buy";
+  function openShop(){ _shopTab = "buy"; renderShop(); show("scShop"); }
+  const sellPrice = it => Math.floor((it.price||0) * 0.5);
+  function renderShop(){
+    document.getElementById("shopGold").textContent = prog.gold;
+    const tb = document.getElementById("shopTabs"); tb.innerHTML = "";
+    [["buy","구매"],["sell","판매"]].forEach(([k,l]) => { const b = document.createElement("button"); b.className = "eqtab" + (_shopTab===k?" on":""); b.textContent = l; b.onclick = () => { _shopTab = k; renderShop(); }; tb.appendChild(b); });
+    const list = document.getElementById("shopList"); list.innerHTML = "";
+    if (_shopTab === "buy"){
+      SHOP_STOCK.forEach(id => { const it = DB[id]; if (!it) return;
+        const row = document.createElement("button"); row.className = "invrow"; const can = prog.gold >= it.price;
+        const sub = it.type === "consumable" ? it.desc : `${EQ_LABEL[it.type]} · ${bonusText(it)}`;
+        row.innerHTML = `<span class="iv-ic">${it.icon}</span><span class="iv-info"><b>${it.name}</b><span class="iv-sub">${sub}</span></span><span class="iv-act${can?"":" off"}">🪙${it.price}</span>`;
+        row.onclick = () => { if (prog.gold < it.price){ toast("골드가 부족해요"); return; } prog.gold -= it.price; items[id] = (items[id]||0)+1; toast(`${it.name} 구매!`); autosave(); renderShop(); };
+        list.appendChild(row); });
+    } else {
+      const ids = Object.keys(items).filter(id => items[id] > 0 && DB[id]);
+      if (!ids.length){ list.innerHTML = `<div class="inv-empty">팔 물건이 없어요</div>`; return; }
+      ids.forEach(id => { const it = DB[id]; const row = document.createElement("button"); row.className = "invrow"; const sp = sellPrice(it);
+        row.innerHTML = `<span class="iv-ic">${it.icon}</span><span class="iv-info"><b>${it.name}</b> ×${items[id]}<span class="iv-sub">판매가 🪙${sp}</span></span><span class="iv-act">팔기</span>`;
+        row.onclick = () => { items[id]--; if (items[id] <= 0) delete items[id]; prog.gold += sp; toast(`${it.name} 판매 (+${sp})`); autosave(); renderShop(); };
+        list.appendChild(row); });
+    }
+  }
+
   /* ===== 파티 편성 (전열3·후열3·대기) ===== */
   function openParty(){ renderParty(); show("scParty"); }
   function renderParty(){
@@ -1019,6 +1080,7 @@
   document.getElementById("eqNext").addEventListener("click", () => { _eqHero = (_eqHero + 1) % roster.length; renderEquip(); });
   document.getElementById("eqAuto").addEventListener("click", () => { autoBest(roster[_eqHero]); renderEquip(); });
   document.getElementById("stClose").addEventListener("click", () => backToMenu());
+  document.getElementById("shopClose").addEventListener("click", () => resumeField());
   document.getElementById("stPrev").addEventListener("click", () => { _stHero = (_stHero - 1 + roster.length) % roster.length; renderStatus(); });
   document.getElementById("stNext").addEventListener("click", () => { _stHero = (_stHero + 1) % roster.length; renderStatus(); });
   // 대화창 어디든 탭하면 다음으로
@@ -1098,13 +1160,16 @@
   const DEFAULT_INV = () => ({ potion:5, hipotion:1, ether:2, sword:1, staff:1, helm:1, plate:1, shield:1, gloves:1, boots:1, ring:1 });
 
   const ENEMY_DEF = [
-    { name:"슬라임", emoji:"🟢", maxHp:34, atk:11, def:3, spd:7,  exp:6,  gold:5  },
-    { name:"고블린", emoji:"👺", maxHp:52, atk:16, def:6, spd:10, exp:14, gold:12 },
-    { name:"박쥐",   emoji:"🦇", maxHp:26, atk:13, def:2, spd:15, exp:8,  gold:6  },
-    { name:"늑대",   emoji:"🐺", maxHp:44, atk:17, def:4, spd:13, exp:13, gold:10 },
+    { name:"슬라임", emoji:"🟢", maxHp:34, atk:11, def:3, spd:7,  exp:6,  gold:5,  drops:[{id:"potion",chance:.3}] },
+    { name:"고블린", emoji:"👺", maxHp:52, atk:16, def:6, spd:10, exp:14, gold:12, drops:[{id:"potion",chance:.4},{id:"sword",chance:.08}] },
+    { name:"박쥐",   emoji:"🦇", maxHp:26, atk:13, def:2, spd:15, exp:8,  gold:6,  drops:[{id:"ether",chance:.25}] },
+    { name:"늑대",   emoji:"🐺", maxHp:44, atk:17, def:4, spd:13, exp:13, gold:10, drops:[{id:"hipotion",chance:.12},{id:"boots",chance:.06}] },
   ];
+  const BOSS = { name:"고대 수호기사", emoji:"🐲", maxHp:620, atk:34, def:14, spd:11, exp:240, gold:350, boss:true,
+    drops:[{id:"greatsword",chance:1},{id:"amulet",chance:1},{id:"hipotion",chance:1}] };
   let roster = [], party = [], enemies = [], items = DEFAULT_INV();
-  let prog = { gold:120 };
+  let prog = { gold:120, bossDefeated:false };
+  let _bossObj = null;
   let B = null, _enc = 0, _encNext = TILE * 5;
 
   const battleParty = () => roster.filter(h => h.row !== "reserve");
@@ -1114,7 +1179,7 @@
     roster = ROSTER_DEF.map(mkHero);
     party = [];
     items = DEFAULT_INV();
-    prog = { gold:120 };
+    prog = { gold:120, bossDefeated:false };
     OBJS.forEach(o => { if (o.type === "chest") o.opened = false; });
     _enc = 0; _encNext = TILE * 5;
   }
@@ -1126,11 +1191,11 @@
   function renderMenu(list){ const m = document.getElementById("btMenu"); m.innerHTML = "";
     list.forEach(it => { const b = document.createElement("button"); b.textContent = it.l; if (it.sub) b.className = "sub"; if (it.dis) b.disabled = true; b.onclick = it.f; m.appendChild(b); }); }
   const clearMenu = () => { document.getElementById("btMenu").innerHTML = ""; };
-  function mkBattler(b){ const d = document.createElement("div"); d.className = "battler " + b.side;
+  function mkBattler(b){ const d = document.createElement("div"); d.className = "battler " + b.side + (b.boss ? " boss" : "");
     const spr = b.sprites
       ? `<div class="spr"><img class="hspr" alt="" src="${b.sprites.stance}" onload="this.closest('.spr').classList.add('hasimg')" onerror="this.remove()"><span class="emo">${b.emoji}</span></div>`
       : `<div class="spr"><span class="emo">${b.emoji}</span></div>`;
-    d.innerHTML = spr + `<div class="bname">${b.label||b.name}</div><div class="bhp"><i></i></div>` + (b.side==="hero"?`<div class="bmp"><i></i></div>`:``);
+    d.innerHTML = spr + `<div class="bname">${b.label||b.name}</div>` + (b.boss?`<div class="bosslabel">HP ???</div>`:``) + `<div class="bhp"><i></i></div>` + (b.side==="hero"?`<div class="bmp"><i></i></div>`:``);
     return d; }
   function heroPose(b, pose){ if (!b.sprites || !b.el) return; const img = b.el.querySelector(".hspr"); if (img && b.sprites[pose]) img.src = b.sprites[pose]; }
   function restPose(b){ if (b.side === "hero") heroPose(b, b.hp<=0 ? "death" : (b.stun ? "stunned" : "stance")); }
@@ -1142,8 +1207,12 @@
     party.forEach(h => { h.el = mkBattler(h); (h.row === "back" ? bk : fr).appendChild(h.el); updateBattler(h); });
   }
   function updateBattler(b){ if (!b.el) return;
-    b.el.querySelector(".bhp>i").style.width = Math.max(0, b.hp/eStat(b,"maxHp")*100) + "%";
-    if (b.side === "hero"){ const m = b.el.querySelector(".bmp>i"); if (m) m.style.width = Math.max(0, b.mp/eStat(b,"maxMp")*100) + "%"; } }
+    const ratio = Math.max(0, b.hp/eStat(b,"maxHp"));
+    b.el.querySelector(".bhp>i").style.width = ratio*100 + "%";
+    if (b.side === "hero"){ const m = b.el.querySelector(".bmp>i"); if (m) m.style.width = Math.max(0, b.mp/eStat(b,"maxMp")*100) + "%"; }
+    if (b.boss){ const lab = b.el.querySelector(".bosslabel");
+      if (ratio <= 0.35){ b.el.classList.add("revealed"); if (lab) lab.textContent = `HP ${Math.max(0,b.hp)} / ${b.maxHp}`; }
+      else if (lab) lab.textContent = "HP ???"; } }
   const setActive = (b,on) => b.el && b.el.classList.toggle("active", on);
 
   // ---- effects ----
@@ -1274,15 +1343,21 @@
   }
   async function victory(){
     party.forEach(h => { setActive(h,false); if (h.hp > 0) heroPose(h, "victory"); }); clearMenu();
+    const isBoss = enemies.some(e => e.boss);
     const exp = enemies.reduce((s,e)=>s+e.exp,0), gold = enemies.reduce((s,e)=>s+e.gold,0);
     prog.gold += gold;
+    // 아이템/장비 드롭
+    const drops = [];
+    enemies.forEach(e => (e.drops || []).forEach(d => { if (Math.random() < (d.chance||0)){ items[d.id] = (items[d.id]||0)+1; drops.push(DB[d.id] ? DB[d.id].name : d.id); } }));
     const ups = [];
     roster.forEach(h => { const amt = h.row === "reserve" ? Math.round(exp*0.7) : exp; if (gainExp(h, amt)) ups.push(`${h.name} Lv.${h.lv}`); });
     party.forEach(updateBattler);
-    let msg = `승리! 획득 EXP ${exp} · 골드 +${gold}` + `<br><span style="color:var(--faint);font-size:12px">대기 동료도 EXP 70% 획득</span>`;
-    if (ups.length) msg += `<br>레벨 업: ${ups.join(", ")}`;
+    if (isBoss) prog.bossDefeated = true;
+    let msg = (isBoss ? "👑 보스를 쓰러뜨렸다!<br>" : "승리! ") + `획득 EXP ${exp} · 골드 +${gold}`;
+    if (drops.length) msg += `<br>획득: ${drops.join(", ")}`;
+    if (ups.length)   msg += `<br>레벨 업: ${ups.join(", ")}`;
     setLog(msg);
-    await delay(ups.length ? 2100 : 1500); B = null; resumeField();
+    await delay((isBoss || ups.length || drops.length) ? 2300 : 1500); B = null; resumeField();
   }
   async function defeat(){ clearMenu(); setLog("파티가 전멸했다…"); await delay(1700); B = null; refreshTitle(); show("scTitle"); }
 
@@ -1300,6 +1375,17 @@
     show("scBattle");
     setLog(n > 1 ? "적 무리가 나타났다!" : `${enemies[0].name}이(가) 나타났다!`);
     B = { on:true };
+    battleLoop();
+  }
+  function startBoss(o){
+    stopField();
+    _bossObj = o || null;
+    party = battleParty();
+    enemies = [ { ...BOSS, side:"enemy", hp:BOSS.maxHp, mp:0, defending:false, stun:false, el:null, label:BOSS.name } ];
+    buildBattlers();
+    show("scBattle");
+    setLog(`${BOSS.name}이(가) 앞을 가로막는다!`);
+    B = { on:true, boss:true };
     battleLoop();
   }
 
