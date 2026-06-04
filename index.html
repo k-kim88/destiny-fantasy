@@ -103,6 +103,38 @@
   .hud-save{position:absolute; top:52px; right:14px; z-index:10;
     background:var(--panel); border:1px solid var(--gold-line); color:var(--gold);
     font-size:12px; padding:6px 11px; border-radius:9px; cursor:pointer;}
+  .hud-party{position:absolute; top:90px; right:14px; z-index:10;
+    background:var(--panel); border:1px solid var(--gold-line); color:var(--gold);
+    font-size:12px; padding:6px 11px; border-radius:9px; cursor:pointer;}
+
+  /* 시트(슬롯/파티 공통) */
+  #scSlots, #scParty{justify-content:flex-start; padding:0;}
+  .sheet{width:100%; height:100%; display:flex; flex-direction:column; padding:22px 16px 16px; gap:10px;}
+  .sheet-title{font-family:var(--serif); font-size:22px; color:var(--gold); text-align:center; letter-spacing:.06em;}
+  .sheet-sub{text-align:center; color:var(--muted); font-size:13px;}
+  .sheet-hint{text-align:center; color:var(--faint); font-size:11px; line-height:1.5;}
+  .sheet-list{flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:9px; padding:4px 2px;}
+  .sheet-close{align-self:center; font-family:var(--serif); font-size:15px; color:var(--ink);
+    background:var(--panel); border:1px solid var(--gold-line); border-radius:10px; padding:11px 30px; cursor:pointer;}
+  /* 슬롯 행 */
+  .slotrow{display:flex; flex-direction:column; align-items:flex-start; gap:3px; text-align:left;
+    background:var(--panel); border:1px solid var(--gold-line); border-radius:10px; padding:13px 16px; cursor:pointer; color:var(--ink);}
+  .slotrow.empty{opacity:.6;}
+  .slotrow:disabled{opacity:.4; cursor:default;}
+  .slotrow .sl-name{font-family:var(--serif); font-size:16px; color:var(--gold);}
+  .slotrow .sl-meta{font-size:12px; color:var(--muted);}
+  /* 파티 행 */
+  .prow{display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:9px 11px;}
+  .prow.r-front{border-color:rgba(230,192,116,.55);}
+  .prow.r-back{border-color:rgba(122,162,255,.5);}
+  .prow .p-emo{font-size:26px;}
+  .prow .p-info{flex:1; font-family:var(--serif); color:var(--ink); font-size:14px; line-height:1.3;}
+  .prow .p-info .p-lv{color:var(--gold); font-size:12px;}
+  .prow .p-info .p-sub{display:block; color:var(--muted); font-size:10.5px; font-family:var(--sans);}
+  .prow .p-btns{display:flex; gap:4px;}
+  .prow .p-btns button{font-size:11px; color:var(--muted); background:transparent; border:1px solid var(--line);
+    border-radius:7px; padding:7px 8px; cursor:pointer;}
+  .prow .p-btns button.on{color:#1c1206; background:linear-gradient(180deg,#f0d28c,#d7a948); border-color:#f5dca0;}
 
   /* 가상 조이스틱 (떠다니는 방식 · 반투명) — 누른 자리에 생성 */
   #joyBase{position:absolute; z-index:10; width:148px; height:148px; border-radius:50%;
@@ -145,11 +177,12 @@
   #scBattle.shake{animation:scShake .3s;}
   @keyframes scShake{0%,100%{transform:translate(0,0)}25%{transform:translate(-4px,2px)}75%{transform:translate(4px,-2px)}}
   .bt-stage{flex:1; width:100%; position:relative; display:flex; align-items:center; justify-content:space-between; padding:20px 12px 6px;}
-  .bt-side{display:flex; flex-direction:column; gap:16px; width:44%;}
-  .bt-side.enemies{align-items:flex-start;}
-  .bt-side.heroes{align-items:flex-end;}
-  .battler{position:relative; display:flex; flex-direction:column; align-items:center; width:92px; transition:transform .14s ease;}
-  .battler .spr{font-size:50px; line-height:1; filter:drop-shadow(0 4px 6px rgba(0,0,0,.55));}
+  .bt-side{display:flex; flex-direction:column; gap:13px;}
+  .bt-side.enemies{align-items:flex-start; width:40%;}
+  .bt-side.heroes{flex-direction:row; align-items:center; justify-content:flex-end; gap:6px; width:56%;}
+  .hcol{display:flex; flex-direction:column; gap:13px; justify-content:center;}
+  .battler{position:relative; display:flex; flex-direction:column; align-items:center; width:78px; transition:transform .14s ease;}
+  .battler .spr{font-size:44px; line-height:1; filter:drop-shadow(0 4px 6px rgba(0,0,0,.55));}
   .heroes .battler .spr{transform:scaleX(-1);}            /* 주인공은 적(왼쪽)을 바라봄 */
   .battler .spr .hspr{width:66px; height:66px; object-fit:contain; display:block; image-rendering:auto;}
   .battler .spr .emo{display:block;}
@@ -222,6 +255,7 @@
     <div class="hud"><div class="kick">NORTHERN WOODS</div><div class="loc">북부 숲길</div></div>
     <button class="hud-back" data-a="back">타이틀 ›</button>
     <button class="hud-save" id="btnSave">💾 저장</button>
+    <button class="hud-party" id="btnParty">👥 파티</button>
     <div id="joyBase"><div id="joyKnob"></div></div>
     <button id="aBtn">A</button>
     <div id="dialog" class="hidden">
@@ -237,10 +271,33 @@
   <section class="screen hidden" id="scBattle">
     <div class="bt-stage" id="btStage">
       <div class="bt-side enemies" id="enemySide"></div>
-      <div class="bt-side heroes" id="heroSide"></div>
+      <div class="bt-side heroes" id="heroSide">
+        <div class="hcol" id="heroFront"></div>
+        <div class="hcol" id="heroBack"></div>
+      </div>
     </div>
     <div class="bt-log" id="btLog"></div>
     <div class="bt-menu" id="btMenu"></div>
+  </section>
+
+  <!-- ===== 저장/불러오기 슬롯 ===== -->
+  <section class="screen hidden" id="scSlots">
+    <div class="sheet">
+      <div class="sheet-title" id="slotTitle">저장</div>
+      <div class="sheet-list" id="slotList"></div>
+      <button class="sheet-close" id="slotClose">닫기</button>
+    </div>
+  </section>
+
+  <!-- ===== 파티 편성 ===== -->
+  <section class="screen hidden" id="scParty">
+    <div class="sheet">
+      <div class="sheet-title">파티 편성</div>
+      <div class="sheet-sub" id="partyCounts"></div>
+      <div class="sheet-hint">전열은 물리 피해를 더 받고 더 줍니다 · 후열은 물리 피해 감소(원거리·마법은 영향 없음)</div>
+      <div class="sheet-list" id="partyList"></div>
+      <button class="sheet-close" id="partyClose">닫기</button>
+    </div>
   </section>
 
   <!-- ===== 임시(다음 단계) 화면 ===== -->
@@ -281,10 +338,10 @@
     if (btn.classList.contains("disabled")) return;
     const a = btn.dataset.a;
     if (a === "new")       startField();
-    else if (a === "cont"){ if (loadGame()){ resumeField(); toast("불러왔습니다"); } else toast("저장된 모험이 없어요"); }
+    else if (a === "cont"){ openSlots("load", "title"); }
     else if (a === "settings") openPlaceholder("설정", "사운드 · 언어 등 설정을 다음 단계에서 추가합니다.");
   }));
-  function refreshTitle(){ const c = document.querySelector('#scTitle .item[data-a="cont"]'); if (c) c.classList.toggle("disabled", !hasSave()); }
+  function refreshTitle(){ const c = document.querySelector('#scTitle .item[data-a="cont"]'); if (c) c.classList.toggle("disabled", !hasAnySave()); }
 
   // 뒤로
   $$('[data-a="back"]').forEach(b => b.addEventListener("click", () => { stopField(); refreshTitle(); show("scTitle"); }));
@@ -389,7 +446,7 @@
     player.face = (objWX(o) > player.x) ? 1 : -1;
     if (o.type === "chest"){
       if (o.opened){ openDialog(o.name, ["텅 비어 있다."]); return; }
-      o.opened = true; saveGame(true);
+      o.opened = true; autosave();
       openDialog(o.name, ["보물상자를 열었다!", `${o.item} 와(과) 골드 ${o.gold} 을(를) 얻었다.`]);
     } else {
       openDialog(o.name, o.lines);
@@ -570,48 +627,99 @@
   function startField(){      // 새 게임 — 상태 초기화
     resetGame();
     resumeField();
-    saveGame(true);           // 새 게임 시작 즉시 저장(이어하기 가능)
+    autosave();           // 새 게임 시작 즉시 저장(이어하기 가능)
   }
   function resumeField(){      // 필드로 (전투/대화 후 이어서)
     show("scField");
     sizeCanvas();
     running = true; last = performance.now();
     cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
-    saveGame(true);           // 전투/이벤트 후 자동 저장
+    autosave();           // 전투/이벤트 후 자동 저장
   }
   function stopField(){ running = false; cancelAnimationFrame(raf); clearInput(); }
   function clearInput(){ keys.up=keys.down=keys.left=keys.right=false; hideJoy(); }
 
-  /* ===== 저장 / 이어하기 ===== */
-  const SAVE_KEY = "dc_save_v1";
-  function hasSave(){ try { return !!localStorage.getItem(SAVE_KEY); } catch(e){ return false; } }
-  function saveGame(silent){
-    if (!party.length) return false;     // 진행 중인 게임이 없으면 저장 안 함
+  /* ===== 저장 / 이어하기 (자동 1 + 수동 5슬롯) ===== */
+  const SLOTS = ["1","2","3","4","5"];
+  const slotKey = s => "dc_slot_" + s;
+  function snapshot(){
+    return {
+      px: player.x, py: player.y, face: player.face, gold: prog.gold, items,
+      roster: roster.map(h => ({ key:h.key, lv:h.lv, exp:h.exp, expNext:h.expNext, row:h.row,
+        maxHp:h.maxHp, maxMp:h.maxMp, atk:h.atk, def:h.def, mag:h.mag, spd:h.spd, hp:h.hp, mp:h.mp })),
+      chests: OBJS.map(o => o.type === "chest" ? !!o.opened : null),
+    };
+  }
+  function applySnapshot(s){
+    resetGame();
+    player.x = s.px; player.y = s.py; player.face = s.face || 1;
+    if (s.gold != null) prog.gold = s.gold;
+    if (s.items) items = s.items;
+    if (Array.isArray(s.roster)) s.roster.forEach(sv => { const h = roster.find(x => x.key === sv.key); if (h) Object.assign(h, sv); });
+    if (Array.isArray(s.chests)) s.chests.forEach((op, i) => { if (op !== null && OBJS[i]) OBJS[i].opened = !!op; });
+  }
+  function slotMeta(s){ try{ const raw = localStorage.getItem(slotKey(s)); return raw ? (JSON.parse(raw).meta || {}) : null; } catch(e){ return null; } }
+  function hasAnySave(){ try{ return ["auto", ...SLOTS].some(s => localStorage.getItem(slotKey(s))); } catch(e){ return false; } }
+  function saveToSlot(s, silent){
+    if (!roster.length) return false;
     try{
-      const snap = {
-        px: player.x, py: player.y, face: player.face,
-        party: party.map(h => ({ hp:h.hp, mp:h.mp, maxHp:h.maxHp, maxMp:h.maxMp, atk:h.atk, def:h.def, mag:h.mag, spd:h.spd })),
-        items, prog,
-        chests: OBJS.map(o => o.type === "chest" ? !!o.opened : null),
-      };
-      localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
+      const lead = roster[0];
+      const data = { meta:{ t:Date.now(), gold:prog.gold, lead:`${lead.name} Lv.${lead.lv}`, n:roster.length }, snap:snapshot() };
+      localStorage.setItem(slotKey(s), JSON.stringify(data));
       refreshTitle();
-      if (!silent) toast("저장되었습니다");
+      if (!silent) toast(s === "auto" ? "자동 저장됨" : `슬롯 ${s}에 저장했습니다`);
       return true;
     } catch(e){ if (!silent) toast("저장 실패"); return false; }
   }
-  function loadGame(){
-    try{
-      const raw = localStorage.getItem(SAVE_KEY); if (!raw) return false;
-      const s = JSON.parse(raw);
-      resetGame();
-      player.x = s.px; player.y = s.py; player.face = s.face || 1;
-      if (Array.isArray(s.party)) s.party.forEach((sv, i) => { if (party[i]) Object.assign(party[i], sv); });
-      if (s.items) items = s.items;
-      if (s.prog)  prog  = s.prog;
-      if (Array.isArray(s.chests)) s.chests.forEach((op, i) => { if (op !== null && OBJS[i]) OBJS[i].opened = !!op; });
-      return true;
-    } catch(e){ return false; }
+  function loadFromSlot(s){
+    try{ const raw = localStorage.getItem(slotKey(s)); if (!raw) return false; applySnapshot(JSON.parse(raw).snap); return true; }
+    catch(e){ return false; }
+  }
+  const autosave = () => saveToSlot("auto", true);
+
+  // 슬롯 화면
+  let _slotMode = "save", _slotBack = "field";
+  function openSlots(mode, back){ _slotMode = mode; _slotBack = back; if (back === "field") stopField(); renderSlots(); show("scSlots"); }
+  function renderSlots(){
+    document.getElementById("slotTitle").textContent = _slotMode === "load" ? "불러오기" : "저장하기";
+    const list = document.getElementById("slotList"); list.innerHTML = "";
+    const slots = _slotMode === "load" ? ["auto", ...SLOTS] : SLOTS;
+    slots.forEach(s => {
+      const m = slotMeta(s), name = s === "auto" ? "자동 저장" : "슬롯 " + s;
+      const row = document.createElement("button"); row.className = "slotrow" + (m ? "" : " empty");
+      row.innerHTML = `<span class="sl-name">${name}</span><span class="sl-meta">${ m ? `${m.lead} · 골드 ${m.gold} · ${new Date(m.t).toLocaleString()}` : "— 비어 있음 —" }</span>`;
+      if (_slotMode === "load"){ if (m) row.onclick = () => { if (loadFromSlot(s)){ resumeField(); toast("불러왔습니다"); } }; else row.disabled = true; }
+      else row.onclick = () => { if (saveToSlot(s, false)) renderSlots(); };
+      list.appendChild(row);
+    });
+  }
+  function slotsBack(){ if (_slotBack === "field") resumeField(); else { refreshTitle(); show("scTitle"); } }
+
+  /* ===== 파티 편성 (전열3·후열3·대기) ===== */
+  function openParty(){ stopField(); renderParty(); show("scParty"); }
+  function renderParty(){
+    const fr = roster.filter(h => h.row === "front").length, bk = roster.filter(h => h.row === "back").length;
+    document.getElementById("partyCounts").textContent = `전열 ${fr}/3 · 후열 ${bk}/3 · 골드 ${prog.gold}`;
+    const list = document.getElementById("partyList"); list.innerHTML = "";
+    roster.forEach(h => {
+      const row = document.createElement("div"); row.className = "prow r-" + h.row;
+      row.innerHTML = `<span class="p-emo">${h.emoji}</span>
+        <span class="p-info"><b>${h.name}</b> <span class="p-lv">Lv.${h.lv}</span>
+          <span class="p-sub">HP ${h.hp}/${h.maxHp} · MP ${h.mp}/${h.maxMp} · EXP ${h.exp}/${h.expNext}</span></span>`;
+      const btns = document.createElement("span"); btns.className = "p-btns";
+      [["front","전열"],["back","후열"],["reserve","대기"]].forEach(([r, lab]) => {
+        const b = document.createElement("button"); b.textContent = lab; if (h.row === r) b.classList.add("on");
+        b.onclick = () => setRow(h, r); btns.appendChild(b);
+      });
+      row.appendChild(btns); list.appendChild(row);
+    });
+  }
+  function setRow(h, r){
+    if (h.row === r) return;
+    if (r === "front" && roster.filter(x => x.row === "front").length >= 3){ toast("전열이 가득 찼어요 (최대 3)"); return; }
+    if (r === "back"  && roster.filter(x => x.row === "back").length  >= 3){ toast("후열이 가득 찼어요 (최대 3)"); return; }
+    if (r === "reserve" && h.row !== "reserve" && roster.filter(x => x.row !== "reserve").length <= 1){ toast("최소 1명은 출전해야 해요"); return; }
+    h.row = r; renderParty(); autosave();
   }
 
   // ===== 떠다니는 가상 조이스틱 (캔버스 아무 곳이나 누르면 그 자리에 생성) =====
@@ -652,7 +760,10 @@
   document.addEventListener("keyup",   e => { if (KEY[e.key]) keys[KEY[e.key]] = false; });
 
   $("#aBtn").addEventListener("click", () => pressA());
-  document.getElementById("btnSave").addEventListener("click", () => saveGame(false));
+  document.getElementById("btnSave").addEventListener("click", () => openSlots("save","field"));
+  document.getElementById("btnParty").addEventListener("click", () => openParty());
+  document.getElementById("slotClose").addEventListener("click", () => slotsBack());
+  document.getElementById("partyClose").addEventListener("click", () => resumeField());
   // 대화창 어디든 탭하면 다음으로
   document.getElementById("dialog").addEventListener("pointerdown", e => { e.preventDefault(); advanceDialog(); });
   window.addEventListener("resize", () => { if (running) sizeCanvas(); });
@@ -672,31 +783,52 @@
     guard:GW+"guard.png", hit:GW+"hit.png", staggered:GW+"staggered.png", stunned:GW+"stunned.png",
     knockdown:GW+"knockdown.png", victory:GW+"victory.png", casting:GW+"casting.png", death:GW+"death.png",
   };
-  const PARTY_DEF = [
-    { name:"광민", emoji:"🤺", sprites:POSE, maxHp:84, maxMp:10, atk:18, def:9,  mag:6,  spd:11,
-      abilities:[ {name:"강타", mp:0, kind:"phys", power:1.8, target:"enemy", emo:"⚔️", heavy:true} ] },
-    { name:"아리아",   emoji:"🧙", maxHp:52, maxMp:40, atk:9,  def:5,  mag:18, spd:12,
-      abilities:[ {name:"파이어", mp:6,  kind:"mag",  power:1.0, target:"enemy",     emo:"🔥"},
-                  {name:"라이트닝", mp:14, kind:"mag",  power:0.8, target:"allEnemies", emo:"⚡"} ] },
-    { name:"레온",     emoji:"🛡️", maxHp:68, maxMp:28, atk:13, def:8,  mag:13, spd:9,
-      abilities:[ {name:"힐",    mp:8,  kind:"heal", power:1.0, target:"ally",  emo:"✨"},
-                  {name:"파이어", mp:6,  kind:"mag",  power:0.9, target:"enemy", emo:"🔥"} ] },
+  // 공용 어빌리티
+  const AB = {
+    smash:{name:"강타",   mp:0,  kind:"phys", power:1.8, target:"enemy",     emo:"⚔️", heavy:true},
+    shot: {name:"속사",   mp:0,  kind:"phys", power:1.5, target:"enemy",     emo:"🏹"},
+    fire: {name:"파이어", mp:6,  kind:"mag",  power:1.0, target:"enemy",     emo:"🔥"},
+    bolt: {name:"라이트닝", mp:14, kind:"mag",  power:0.8, target:"allEnemies", emo:"⚡"},
+    heal: {name:"힐",     mp:8,  kind:"heal", power:1.0, target:"ally",      emo:"✨"},
+  };
+  // 동료 로스터(8인). g: 성장타입(phys/mag), row: 기본 배치
+  const ROSTER_DEF = [
+    { key:"gwangmin", name:"광민", emoji:"🤺", g:"phys", sprites:POSE, row:"front", base:{maxHp:84,maxMp:12,atk:18,def:9, mag:6, spd:11}, abil:["smash"] },
+    { key:"leon",     name:"레온", emoji:"🛡️", g:"phys", row:"front", base:{maxHp:74,maxMp:24,atk:14,def:10,mag:11,spd:9},  abil:["heal","fire"] },
+    { key:"gangwoo",  name:"강우", emoji:"🥊", g:"phys", row:"front", base:{maxHp:92,maxMp:8, atk:19,def:8, mag:4, spd:10}, abil:["smash"] },
+    { key:"aria",     name:"아리아", emoji:"🧙", g:"mag",  row:"back",  base:{maxHp:50,maxMp:42,atk:9, def:5, mag:19,spd:12}, abil:["fire","bolt"] },
+    { key:"mir",      name:"미르", emoji:"⛪", g:"mag",  row:"back",  base:{maxHp:56,maxMp:38,atk:10,def:6, mag:16,spd:10}, abil:["heal","fire"] },
+    { key:"jihun",    name:"지훈", emoji:"🏹", g:"phys", row:"back",  base:{maxHp:62,maxMp:14,atk:16,def:6, mag:8, spd:15}, abil:["shot"] },
+    { key:"sera",     name:"세라", emoji:"🗡️", g:"phys", row:"reserve", base:{maxHp:60,maxMp:12,atk:17,def:7,mag:6, spd:16}, abil:["smash"] },
+    { key:"daon",     name:"다온", emoji:"🔱", g:"phys", row:"reserve", base:{maxHp:80,maxMp:14,atk:17,def:9,mag:7, spd:9},  abil:["smash"] },
   ];
+  function mkHero(d){ return { key:d.key, name:d.name, emoji:d.emoji, sprites:d.sprites||null, g:d.g, row:d.row,
+    abilities:d.abil.map(k=>({ ...AB[k] })), side:"hero", lv:1, exp:0, expNext:24,
+    maxHp:d.base.maxHp, maxMp:d.base.maxMp, atk:d.base.atk, def:d.base.def, mag:d.base.mag, spd:d.base.spd,
+    hp:d.base.maxHp, mp:d.base.maxMp, defending:false, stun:false, el:null }; }
+  function grow(h){ const g = h.g === "mag" ? {hp:5,mp:5,atk:1,def:1,mag:3,spd:1} : {hp:9,mp:2,atk:2,def:1,mag:1,spd:1};
+    h.maxHp+=g.hp; h.maxMp+=g.mp; h.atk+=g.atk; h.def+=g.def; h.mag+=g.mag; h.spd+=g.spd; h.hp=h.maxHp; h.mp=h.maxMp; }
+  function gainExp(h, amt){ h.exp += amt; let up = false;
+    while (h.exp >= h.expNext){ h.exp -= h.expNext; h.lv++; h.expNext = Math.round(h.expNext*1.5); grow(h); up = true; } return up; }
+
   const ENEMY_DEF = [
     { name:"슬라임", emoji:"🟢", maxHp:34, atk:11, def:3, spd:7,  exp:6,  gold:5  },
     { name:"고블린", emoji:"👺", maxHp:52, atk:16, def:6, spd:10, exp:14, gold:12 },
     { name:"박쥐",   emoji:"🦇", maxHp:26, atk:13, def:2, spd:15, exp:8,  gold:6  },
     { name:"늑대",   emoji:"🐺", maxHp:44, atk:17, def:4, spd:13, exp:13, gold:10 },
   ];
-  let party = [], enemies = [], items = { "포션":3, "에테르":1 };
-  let prog = { lv:1, exp:0, expNext:24, gold:0 };
+  let roster = [], party = [], enemies = [], items = { "포션":3, "에테르":1 };
+  let prog = { gold:0 };
   let B = null, _enc = 0, _encNext = TILE * 5;
+
+  const battleParty = () => roster.filter(h => h.row !== "reserve");
 
   function resetGame(){
     player.x = START.x; player.y = START.y; player.face = 1;
-    party = PARTY_DEF.map(d => ({ ...d, abilities:d.abilities.map(a=>({...a})), side:"hero", hp:d.maxHp, mp:d.maxMp, defending:false, stun:false, el:null }));
+    roster = ROSTER_DEF.map(mkHero);
+    party = [];
     items = { "포션":3, "에테르":1 };
-    prog = { lv:1, exp:0, expNext:24, gold:0 };
+    prog = { gold:0 };
     OBJS.forEach(o => { if (o.type === "chest") o.opened = false; });
     _enc = 0; _encNext = TILE * 5;
   }
@@ -717,10 +849,11 @@
   function heroPose(b, pose){ if (!b.sprites || !b.el) return; const img = b.el.querySelector(".hspr"); if (img && b.sprites[pose]) img.src = b.sprites[pose]; }
   function restPose(b){ if (b.side === "hero") heroPose(b, b.hp<=0 ? "death" : (b.stun ? "stunned" : "stance")); }
   function buildBattlers(){
-    const es = document.getElementById("enemySide"), hs = document.getElementById("heroSide");
-    es.innerHTML = ""; hs.innerHTML = "";
+    const es = document.getElementById("enemySide");
+    const fr = document.getElementById("heroFront"), bk = document.getElementById("heroBack");
+    es.innerHTML = ""; fr.innerHTML = ""; bk.innerHTML = "";
     enemies.forEach(e => { e.el = mkBattler(e); es.appendChild(e.el); updateBattler(e); });
-    party.forEach(h => { h.el = mkBattler(h); hs.appendChild(h.el); updateBattler(h); });
+    party.forEach(h => { h.el = mkBattler(h); (h.row === "back" ? bk : fr).appendChild(h.el); updateBattler(h); });
   }
   function updateBattler(b){ if (!b.el) return;
     b.el.querySelector(".bhp>i").style.width = Math.max(0, b.hp/b.maxHp*100) + "%";
@@ -753,6 +886,11 @@
     else { heroPose(att, opt.heavy ? "heavy" : "slashStart"); await lunge(att); if (!opt.heavy) heroPose(att, "slashImpact"); }
     let d = (opt.kind === "mag" ? magDmg(att,tgt,opt.power) : physDmg(att,tgt,opt.power));
     if (crit) d = Math.round(d*1.8);
+    // 진형 보정: 후열은 물리 피해를 덜 받고, 물리 위력도 약함
+    if (opt.kind === "phys"){
+      if (att.side === "hero" && att.row === "back") d = Math.round(d*0.6);
+      if (tgt.side === "hero" && tgt.row === "back") d = Math.round(d*0.6);
+    }
     if (tgt.defending) d = Math.round(d*0.5);
     tgt.hp -= d;
     sparkAt(tgt, opt.emo || (crit ? "💥" : "✦"));
@@ -848,18 +986,20 @@
   async function victory(){
     party.forEach(h => { setActive(h,false); if (h.hp > 0) heroPose(h, "victory"); }); clearMenu();
     const exp = enemies.reduce((s,e)=>s+e.exp,0), gold = enemies.reduce((s,e)=>s+e.gold,0);
-    prog.exp += exp; prog.gold += gold;
-    let msg = `승리! EXP +${exp} · 골드 +${gold}`, lv = false;
-    while (prog.exp >= prog.expNext){ prog.exp -= prog.expNext; prog.lv++; prog.expNext = Math.round(prog.expNext*1.5); lv = true;
-      party.forEach(h => { h.maxHp += 10; h.maxMp += 4; h.atk += 2; h.def += 1; h.mag += 2; h.hp = h.maxHp; h.mp = h.maxMp; }); }
-    if (lv) msg += `<br>파티 레벨 업! Lv.${prog.lv} — 능력치 상승!`;
-    party.forEach(updateBattler); setLog(msg);
-    await delay(lv ? 1900 : 1450); B = null; resumeField();
+    prog.gold += gold;
+    const ups = [];
+    roster.forEach(h => { const amt = h.row === "reserve" ? Math.round(exp*0.7) : exp; if (gainExp(h, amt)) ups.push(`${h.name} Lv.${h.lv}`); });
+    party.forEach(updateBattler);
+    let msg = `승리! 획득 EXP ${exp} · 골드 +${gold}` + `<br><span style="color:var(--faint);font-size:12px">대기 동료도 EXP 70% 획득</span>`;
+    if (ups.length) msg += `<br>레벨 업: ${ups.join(", ")}`;
+    setLog(msg);
+    await delay(ups.length ? 2100 : 1500); B = null; resumeField();
   }
   async function defeat(){ clearMenu(); setLog("파티가 전멸했다…"); await delay(1700); B = null; refreshTitle(); show("scTitle"); }
 
   function startBattle(){
     stopField();
+    party = battleParty();                 // 출전 파티(전열/후열, 최대 6)
     const n = 1 + Math.floor(Math.random()*3);
     enemies = [];
     for (let i = 0; i < n; i++){ const d = ENEMY_DEF[Math.floor(Math.random()*ENEMY_DEF.length)];
