@@ -13,7 +13,8 @@ export const ASSETS = { art: {}, sprites: {}, anim: {}, story: {}, ch1: [] };
 
 // base()는 Vite가 배포 경로(BASE_URL)를 주입
 function url(p) {
-  const base = import.meta.env.BASE_URL || "/";
+  const env = import.meta.env || {};
+  const base = env.BASE_URL || "/";
   return base.replace(/\/$/, "") + "/" + p;
 }
 

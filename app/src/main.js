@@ -8,8 +8,15 @@ import { TitleScreen } from "./ui/title.js";
 import { FieldScreen } from "./game/field.js";
 import { CharsScreen, SettingsScreen, MenuScreen, BattleScreen } from "./ui/stubs.js";
 
+// 모듈이 실제로 로드/실행되었음을 표시 (index.html의 부팅 타임아웃 진단용)
+window.__DF_BOOTED = true;
+
 const root = document.getElementById("screens");
 initScreens(root);
+
+function showError(msg) {
+  root.innerHTML = `<section class="screen" style="position:static;display:flex;align-items:center;justify-content:center;height:100%;padding:24px;color:#ff9a8a;text-align:center;white-space:pre-wrap;font-size:13px">실행 오류\n\n${msg}</section>`;
+}
 
 registerScreen("title", TitleScreen);
 registerScreen("field", FieldScreen);
@@ -37,17 +44,17 @@ function showLoading(pct) {
 }
 
 async function boot() {
-  fitApp();
-  showLoading(0);
   try {
-    await loadAssets((done, total) => showLoading(Math.round((done / total) * 100)));
+    fitApp();
+    showLoading(0);
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("에셋 로딩 시간 초과 (네트워크/캐시 확인)")), 15000));
+    await Promise.race([loadAssets((done, total) => showLoading(Math.round((done / total) * 100))), timeout]);
     preloadImages();
+    checkSave();
+    showScreen("title");
   } catch (e) {
-    root.innerHTML = `<section class="screen" style="position:static;display:flex;align-items:center;justify-content:center;padding:24px;color:var(--atk);text-align:center">에셋 로딩 실패<br><small style="color:var(--ink-3)">${e.message}</small></section>`;
-    return;
+    showError((e && (e.stack || e.message)) || "unknown error");
   }
-  checkSave();
-  showScreen("title");
 }
 
 boot();

@@ -30,3 +30,4 @@ _site/
 # Misc
 .DS_Store
 *.log
+app/_boot_test.mjs
