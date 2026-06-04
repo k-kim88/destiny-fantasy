@@ -199,6 +199,7 @@ body{font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased
 .bmem .nm{font-size:11px;color:var(--ink-2);margin-top:2px;}
 .bmem.hit{animation:shake .26s;}
 .bslot{display:flex;align-items:center;justify-content:center;}
+.bslot.facer{transform:scaleX(-1);}
 .pix{image-rendering:auto;width:auto;display:block;}
 .bmem:not(.acting):not(.down) .bslot img{animation:idlebob 2.6s ease-in-out infinite;}
 @keyframes idlebob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
@@ -987,14 +988,18 @@ function renderEnemies(){
     </div>`;}).join("");
   $("#enemyZone").querySelectorAll(".enemy").forEach(el=>el.onclick=()=>{ if(B.stage==="target"){B.tgt=+el.dataset.i;renderEnemies();} });
 }
+// 적은 화면 왼쪽(#enemyZone)에 있으므로 파티원은 모두 왼쪽을 봐야 한다.
+// 아카네 스프라이트만 원본이 왼쪽을 향하고, 나머지는 오른쪽을 향하므로 좌우반전한다.
+const BATTLE_NOFLIP=new Set(["akane"]);
 function renderPartySprites(){
   const front=[],back=[]; G.party.forEach((p,i)=>(p.row==="back"?back:front).push({p,i}));
   const colHtml=(arr,lab)=>`<div class="bcol"><div class="colhead">${lab}</div>${arr.map(({p,i})=>{
     const dead=p.hp<=0,u=dead?frameURI(p.key,"down",0):frameURI(p.key,"idle",0);
+    const flip=BATTLE_NOFLIP.has(p.key)?"":" facer";
     const inner=u?`<img id="bspr${i}" class="pix" src="${u}" style="height:${dead?38:74}px">`:spr(p,70);
     return `<div class="bmem ${dead?'down':''} ${B.cur===i?'acting':''}" data-hi="${i}">
       <div class="cursor" style="display:${B.cur===i?'block':'none'}">▶</div>
-      <div class="bslot" style="width:74px;height:80px;align-items:flex-end;">${inner}</div>
+      <div class="bslot${flip}" style="width:74px;height:80px;align-items:flex-end;">${inner}</div>
       <div class="nm">${nm(p.name)}</div></div>`;}).join("")}</div>`;
   $("#partyZone").innerHTML=colHtml(front,L("front"))+colHtml(back,L("back"));
 }
