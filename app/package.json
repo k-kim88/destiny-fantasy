@@ -1,0 +1,15 @@
+{
+  "name": "destiny-fantasy-v2",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "description": "DESTINY FANTASY — modular rebuild (Vite + vanilla ES modules)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

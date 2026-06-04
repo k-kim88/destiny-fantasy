@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# v2 app build output
+app/dist/
+
 # Capacitor staged web output (generated from index.html by scripts/build-www.mjs)
 www/
 

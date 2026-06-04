@@ -8,6 +8,7 @@ on:
       - "manifest.webmanifest"
       - "sw.js"
       - "icons/**"
+      - "app/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -29,12 +30,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Assemble static site
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # 1) 기존(루트) 단일파일 게임 — 그대로 / 에 배포
+      - name: Assemble root site (v1)
         run: |
           mkdir -p _site/icons
           cp index.html manifest.webmanifest sw.js _site/
           cp -r icons/* _site/icons/
           touch _site/.nojekyll
+      # 2) 새 구조 프로젝트 — /app/ 경로에 빌드하여 배포
+      - name: Build v2 app
+        working-directory: app
+        run: |
+          npm ci || npm install
+          npm run build
+      - name: Place v2 under /app
+        run: |
+          mkdir -p _site/app
+          cp -r app/dist/* _site/app/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
