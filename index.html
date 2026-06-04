@@ -136,36 +136,57 @@
   .dlg-next{position:absolute; right:14px; bottom:9px; color:var(--gold); font-size:13px; animation:blink 1.1s infinite;}
   @keyframes blink{50%{opacity:.15}}
 
-  /* ===== 전투 ===== */
+  /* ===== 전투 (FF6 사이드뷰) ===== */
   #scBattle{padding:0; gap:0; justify-content:flex-start;
-    background:radial-gradient(120% 70% at 50% 0%, #281c44 0%, #140d26 55%, #08060f 100%);}
-  .bt-top{flex:1; width:100%; position:relative; display:flex; align-items:center; justify-content:center;}
-  .bt-enemy{text-align:center; transition:opacity .5s, transform .5s;}
-  .bt-enemy.hit{animation:btshake .3s;}
-  @keyframes btshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
-  .bt-enemy.dead{opacity:0; transform:scale(.6) translateY(12px);}
-  .bt-emo{font-size:88px; line-height:1; filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));}
-  .bt-ename{font-family:var(--serif); color:var(--ink); font-size:15px; margin-top:8px; letter-spacing:.04em;}
-  .ebar{width:150px; height:8px; margin:8px auto 0; background:rgba(0,0,0,.5);
-    border:1px solid var(--line); border-radius:4px; overflow:hidden;}
-  .ebar > i{display:block; height:100%; background:linear-gradient(180deg,#e2574a,#a32f2a); transition:width .3s;}
-  .bt-flash{position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none;}
-  .bt-flash.on{animation:fl .2s ease;}
-  @keyframes fl{30%{opacity:.5}100%{opacity:0}}
-  .bt-msg{width:100%; padding:13px 18px; min-height:54px; color:var(--ink); font-size:14.5px; line-height:1.5;
-    background:rgba(9,14,32,.92); border-top:1px solid var(--gold-line); border-bottom:1px solid var(--gold-line);}
-  .bt-player{width:100%; padding:12px 18px 2px;}
-  .bt-prow{display:flex; justify-content:space-between; align-items:baseline;
-    font-family:var(--serif); color:var(--ink); font-size:15px;}
-  .bt-prow .lv{color:var(--gold); font-size:12px;}
-  .pbar{height:12px; margin-top:6px; background:rgba(0,0,0,.5); border:1px solid var(--line); border-radius:6px; overflow:hidden;}
-  .pbar > i{display:block; height:100%; background:linear-gradient(180deg,#5fce7a,#2f8a48); transition:width .3s;}
-  .bt-hp{text-align:right; font-size:12px; color:var(--muted); margin-top:3px;}
-  .bt-cmds{width:100%; padding:10px 16px 20px; display:grid; grid-template-columns:repeat(3,1fr); gap:9px;}
-  .bt-cmds button{font-family:var(--serif); font-size:16px; font-weight:600; color:#1c1206;
-    background:linear-gradient(180deg,#f0d28c,#d7a948); border:1px solid #f5dca0; border-radius:10px; padding:13px 0; cursor:pointer;}
-  .bt-cmds button:active{transform:scale(.97);}
-  .bt-cmds button:disabled{opacity:.38; cursor:default;}
+    background:linear-gradient(180deg,#1c1438 0%, #0e0a1e 58%, #08060f 100%);}
+  #scBattle.shake{animation:scShake .3s;}
+  @keyframes scShake{0%,100%{transform:translate(0,0)}25%{transform:translate(-4px,2px)}75%{transform:translate(4px,-2px)}}
+  .bt-stage{flex:1; width:100%; position:relative; display:flex; align-items:center; justify-content:space-between; padding:20px 12px 6px;}
+  .bt-side{display:flex; flex-direction:column; gap:16px; width:44%;}
+  .bt-side.enemies{align-items:flex-start;}
+  .bt-side.heroes{align-items:flex-end;}
+  .battler{position:relative; display:flex; flex-direction:column; align-items:center; width:92px; transition:transform .14s ease;}
+  .battler .spr{font-size:50px; line-height:1; filter:drop-shadow(0 4px 6px rgba(0,0,0,.55));}
+  .heroes .battler .spr{transform:scaleX(-1);}            /* 주인공은 적(왼쪽)을 바라봄 */
+  .battler .bname{font-size:11px; color:var(--ink); margin-top:4px; font-family:var(--serif);}
+  .battler .bhp,.battler .bmp{width:76px; height:6px; margin-top:3px; background:rgba(0,0,0,.5); border:1px solid var(--line); border-radius:3px; overflow:hidden;}
+  .battler .bhp>i{display:block; height:100%; background:linear-gradient(180deg,#5fce7a,#2f8a48); transition:width .3s;}
+  .battler .bmp>i{display:block; height:100%; background:linear-gradient(180deg,#6aa8ff,#2f5fb0); transition:width .3s;}
+  .battler.active .bname{color:var(--gold);}
+  .battler.active::after{content:"▶"; position:absolute; left:-14px; top:16px; color:var(--gold); font-size:12px; animation:blink 1s infinite;}
+  .heroes .battler.active::after{content:"◀"; left:auto; right:-14px;}
+  .heroes .battler.lunge{transform:translateX(-26px) scale(1.06);}
+  .enemies .battler.lunge{transform:translateX(26px) scale(1.06);}
+  .battler.hurt{animation:hurtShake .32s;}
+  @keyframes hurtShake{0%,100%{} 30%{transform:translateX(6px)} 60%{transform:translateX(-5px)}}
+  .battler.hurt .spr{animation:hurtFlash .32s;}
+  @keyframes hurtFlash{0%{filter:brightness(3) saturate(2) drop-shadow(0 0 6px #f55)} 100%{}}
+  .battler.dead .spr{animation:die .6s forwards;}
+  @keyframes die{to{opacity:0; transform:rotate(62deg) translateY(16px); filter:grayscale(1) brightness(.5);}}
+  .battler.cast{animation:castHop .6s;}
+  @keyframes castHop{40%{transform:translateY(-9px)}}
+  .battler.cast .spr{animation:castGlow .6s;}
+  @keyframes castGlow{40%{filter:drop-shadow(0 0 11px var(--gold)) brightness(1.35)}}
+  .battler.targetable .spr{cursor:pointer; animation:tgtPulse .7s infinite;}
+  @keyframes tgtPulse{50%{filter:drop-shadow(0 0 9px #fff) brightness(1.35)}}
+  .dmgnum{position:absolute; top:-4px; left:50%; font-family:var(--serif); font-weight:800; font-size:21px;
+    color:#ff6a5a; text-shadow:0 2px 3px #000; pointer-events:none; animation:floatUp .85s forwards;}
+  .dmgnum.crit{font-size:28px; color:#ffd24a;}
+  .dmgnum.heal{color:#6fe28a;}
+  .dmgnum.miss{font-size:15px; color:#cfd6e6;}
+  @keyframes floatUp{0%{opacity:0; transform:translate(-50%,8px)} 20%{opacity:1} 100%{opacity:0; transform:translate(-50%,-34px)}}
+  .spark{position:absolute; top:8px; left:50%; transform:translate(-50%,-50%); font-size:30px; pointer-events:none; animation:spk .42s forwards;}
+  @keyframes spk{0%{opacity:0; transform:translate(-50%,-50%) scale(.4)} 40%{opacity:1} 100%{opacity:0; transform:translate(-50%,-50%) scale(1.6)}}
+  .stun{position:absolute; top:-16px; left:50%; font-size:18px; animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:translate(-50%,0) rotate(360deg)} from{transform:translate(-50%,0) rotate(0)}}
+  .bt-log{width:100%; padding:11px 16px; min-height:46px; color:var(--ink); font-size:14px; line-height:1.45;
+    background:rgba(9,14,32,.93); border-top:1px solid var(--gold-line);}
+  .bt-menu{width:100%; padding:10px 14px 18px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; min-height:62px;}
+  .bt-menu button{font-family:var(--serif); font-size:15px; font-weight:600; color:#1c1206;
+    background:linear-gradient(180deg,#f0d28c,#d7a948); border:1px solid #f5dca0; border-radius:9px; padding:12px 4px; cursor:pointer;}
+  .bt-menu button.sub{background:rgba(12,20,46,.92); color:var(--gold); border-color:var(--gold-line);}
+  .bt-menu button:active{transform:scale(.97);}
+  .bt-menu button:disabled{opacity:.4; cursor:default;}
 </style>
 </head>
 <body>
@@ -205,27 +226,14 @@
     </div>
   </section>
 
-  <!-- ===== 전투 화면 ===== -->
+  <!-- ===== 전투 화면 (FF6 사이드뷰) ===== -->
   <section class="screen hidden" id="scBattle">
-    <div class="bt-top">
-      <div class="bt-enemy" id="btEnemy">
-        <div class="bt-emo" id="enemyEmo">🟢</div>
-        <div class="bt-ename" id="enemyName">슬라임</div>
-        <div class="ebar"><i id="enemyHp" style="width:100%"></i></div>
-      </div>
-      <div class="bt-flash" id="btFlash"></div>
+    <div class="bt-stage" id="btStage">
+      <div class="bt-side enemies" id="enemySide"></div>
+      <div class="bt-side heroes" id="heroSide"></div>
     </div>
-    <div class="bt-msg" id="btMsg"></div>
-    <div class="bt-player">
-      <div class="bt-prow"><span>크루세이더</span><span class="lv" id="pLv">Lv.1</span></div>
-      <div class="pbar"><i id="pHpBar" style="width:100%"></i></div>
-      <div class="bt-hp" id="pHpText">60 / 60</div>
-    </div>
-    <div class="bt-cmds" id="btCmds">
-      <button data-c="attack">공격</button>
-      <button data-c="defend">방어</button>
-      <button data-c="flee">도망</button>
-    </div>
+    <div class="bt-log" id="btLog"></div>
+    <div class="bt-menu" id="btMenu"></div>
   </section>
 
   <!-- ===== 임시(다음 단계) 화면 ===== -->
@@ -422,7 +430,7 @@
       if (tr>=0 && tr<ROWS && tc>=0 && tc<COLS && MAP[tr][tc]===0){
         _enc += sp * inp.mag;
         if (_enc >= _encNext){ _enc = 0; _encNext = TILE*(4+Math.random()*5);
-          startBattle(ENEMIES[Math.floor(Math.random()*ENEMIES.length)]); return; }
+          startBattle(); return; }
       }
     }
 
@@ -606,90 +614,205 @@
   window.addEventListener("resize", () => { if (running) sizeCanvas(); });
 
   /* =========================================================================
-     STEP 4 — 턴제 전투
+     STEP 4 — 턴제 전투 (FF6 사이드뷰 · 파티 vs 적 무리)
      ========================================================================= */
   const START = { x: player.x, y: player.y };
-  const P = { lv:1, hp:60, maxHp:60, atk:14, def:6, exp:0, expNext:20, gold:0 };
-  const ENEMIES = [
-    { name:"슬라임", emo:"🟢", hp:30, atk:10, def:3, exp:8,  gold:6  },
-    { name:"박쥐",   emo:"🦇", hp:22, atk:13, def:1, exp:9,  gold:5  },
-    { name:"고블린", emo:"👺", hp:48, atk:16, def:6, exp:18, gold:15 },
-  ];
-  let B = null, _enc = 0, _encNext = TILE * 5;
   const rnd = (a, b) => a + Math.random() * (b - a);
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+
+  const PARTY_DEF = [
+    { name:"크루세이더", emoji:"🤺", maxHp:84, maxMp:10, atk:18, def:9,  mag:6,  spd:11,
+      abilities:[ {name:"강타", mp:0, kind:"phys", power:1.8, target:"enemy", emo:"⚔️"} ] },
+    { name:"아리아",   emoji:"🧙", maxHp:52, maxMp:40, atk:9,  def:5,  mag:18, spd:12,
+      abilities:[ {name:"파이어", mp:6,  kind:"mag",  power:1.0, target:"enemy",     emo:"🔥"},
+                  {name:"라이트닝", mp:14, kind:"mag",  power:0.8, target:"allEnemies", emo:"⚡"} ] },
+    { name:"레온",     emoji:"🛡️", maxHp:68, maxMp:28, atk:13, def:8,  mag:13, spd:9,
+      abilities:[ {name:"힐",    mp:8,  kind:"heal", power:1.0, target:"ally",  emo:"✨"},
+                  {name:"파이어", mp:6,  kind:"mag",  power:0.9, target:"enemy", emo:"🔥"} ] },
+  ];
+  const ENEMY_DEF = [
+    { name:"슬라임", emoji:"🟢", maxHp:34, atk:11, def:3, spd:7,  exp:6,  gold:5  },
+    { name:"고블린", emoji:"👺", maxHp:52, atk:16, def:6, spd:10, exp:14, gold:12 },
+    { name:"박쥐",   emoji:"🦇", maxHp:26, atk:13, def:2, spd:15, exp:8,  gold:6  },
+    { name:"늑대",   emoji:"🐺", maxHp:44, atk:17, def:4, spd:13, exp:13, gold:10 },
+  ];
+  let party = [], enemies = [], items = { "포션":3, "에테르":1 };
+  let prog = { lv:1, exp:0, expNext:24, gold:0 };
+  let B = null, _enc = 0, _encNext = TILE * 5;
 
   function resetGame(){
     player.x = START.x; player.y = START.y; player.face = 1;
-    P.lv=1; P.hp=P.maxHp=60; P.atk=14; P.def=6; P.exp=0; P.expNext=20; P.gold=0;
+    party = PARTY_DEF.map(d => ({ ...d, abilities:d.abilities.map(a=>({...a})), side:"hero", hp:d.maxHp, mp:d.maxMp, defending:false, stun:false, el:null }));
+    items = { "포션":3, "에테르":1 };
+    prog = { lv:1, exp:0, expNext:24, gold:0 };
     OBJS.forEach(o => { if (o.type === "chest") o.opened = false; });
     _enc = 0; _encNext = TILE * 5;
   }
 
-  const $id = (i) => document.getElementById(i);
-  function setBars(){
-    $id("pHpBar").style.width = Math.max(0, P.hp/P.maxHp*100) + "%";
-    $id("pHpText").textContent = Math.max(0, P.hp) + " / " + P.maxHp;
-    $id("pLv").textContent = "Lv." + P.lv;
-    if (B) $id("enemyHp").style.width = Math.max(0, B.hp/B.maxHp*100) + "%";
+  // ---- DOM helpers ----
+  const aliveE = () => enemies.filter(e => e.hp > 0);
+  const aliveH = () => party.filter(h => h.hp > 0);
+  const setLog = s => { document.getElementById("btLog").innerHTML = s; };
+  function renderMenu(list){ const m = document.getElementById("btMenu"); m.innerHTML = "";
+    list.forEach(it => { const b = document.createElement("button"); b.textContent = it.l; if (it.sub) b.className = "sub"; if (it.dis) b.disabled = true; b.onclick = it.f; m.appendChild(b); }); }
+  const clearMenu = () => { document.getElementById("btMenu").innerHTML = ""; };
+  function mkBattler(b){ const d = document.createElement("div"); d.className = "battler " + b.side;
+    d.innerHTML = `<div class="spr">${b.emoji}</div><div class="bname">${b.label||b.name}</div><div class="bhp"><i></i></div>` + (b.side==="hero"?`<div class="bmp"><i></i></div>`:``);
+    return d; }
+  function buildBattlers(){
+    const es = document.getElementById("enemySide"), hs = document.getElementById("heroSide");
+    es.innerHTML = ""; hs.innerHTML = "";
+    enemies.forEach(e => { e.el = mkBattler(e); es.appendChild(e.el); updateBattler(e); });
+    party.forEach(h => { h.el = mkBattler(h); hs.appendChild(h.el); updateBattler(h); });
   }
-  const btMsg = (s) => { $id("btMsg").innerHTML = s; };
-  const cmds  = (on) => document.querySelectorAll("#btCmds button").forEach(b => b.disabled = !on);
-  const dmgCalc = (atk, dfn) => Math.max(1, Math.round(atk - dfn*0.6 + rnd(-2, 2)));
-  function flashEnemy(){
-    const f = $id("btFlash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
-    const e = $id("btEnemy"); e.classList.remove("hit"); void e.offsetWidth; e.classList.add("hit");
+  function updateBattler(b){ if (!b.el) return;
+    b.el.querySelector(".bhp>i").style.width = Math.max(0, b.hp/b.maxHp*100) + "%";
+    if (b.side === "hero"){ const m = b.el.querySelector(".bmp>i"); if (m) m.style.width = Math.max(0, b.mp/b.maxMp*100) + "%"; } }
+  const setActive = (b,on) => b.el && b.el.classList.toggle("active", on);
+
+  // ---- effects ----
+  function popNum(b, txt, cls=""){ const d = document.createElement("div"); d.className = "dmgnum " + cls; d.textContent = txt; b.el.appendChild(d); setTimeout(()=>d.remove(), 850); }
+  function sparkAt(b, emo){ const s = document.createElement("div"); s.className = "spark"; s.textContent = emo; b.el.appendChild(s); setTimeout(()=>s.remove(), 430); }
+  function shake(big){ const st = document.getElementById("scBattle"); if (!big) return; st.classList.remove("shake"); void st.offsetWidth; st.classList.add("shake"); }
+  function hurtFx(b){ b.el.classList.remove("hurt"); void b.el.offsetWidth; b.el.classList.add("hurt"); setTimeout(()=>b.el && b.el.classList.remove("hurt"), 340); }
+  async function lunge(b){ b.el.classList.add("lunge"); await delay(170); b.el.classList.remove("lunge"); }
+  function stunOn(b){ if (b.el.querySelector(".stun")) return; const s = document.createElement("div"); s.className = "stun"; s.textContent = "💫"; b.el.appendChild(s); }
+  function stunOff(b){ const s = b.el.querySelector(".stun"); if (s) s.remove(); }
+  async function die(b){ b.el.classList.add("dead"); setLog((b.label||b.name) + " 쓰러졌다!"); await delay(620); }
+
+  const physDmg = (a, t, p) => Math.max(1, Math.round((a.atk*p*1.4 - t.def*0.8) * rnd(.9,1.1)));
+  const magDmg  = (a, t, p) => Math.max(1, Math.round((a.mag*2.0*p - t.def*0.3) * rnd(.9,1.1)));
+
+  // 단일 대상 행동(물리/마법/회복)
+  async function act(att, tgt, opt){
+    if (opt.kind === "heal"){
+      att.el.classList.add("cast"); await delay(280);
+      const h = Math.round(att.mag*2.4*opt.power); tgt.hp = Math.min(tgt.maxHp, tgt.hp + h);
+      sparkAt(tgt, opt.emo||"✨"); popNum(tgt, "+"+h, "heal"); updateBattler(tgt);
+      await delay(420); att.el.classList.remove("cast"); return;
+    }
+    const crit = opt.kind === "phys" && Math.random() < 0.18;
+    if (opt.kind === "mag"){ att.el.classList.add("cast"); await delay(300); }
+    else { await lunge(att); }
+    let d = (opt.kind === "mag" ? magDmg(att,tgt,opt.power) : physDmg(att,tgt,opt.power));
+    if (crit) d = Math.round(d*1.8);
+    if (tgt.defending) d = Math.round(d*0.5);
+    tgt.hp -= d;
+    sparkAt(tgt, opt.emo || (crit ? "💥" : "✦"));
+    popNum(tgt, d, crit ? "crit" : "");
+    hurtFx(tgt); shake(crit || d >= 22); updateBattler(tgt);
+    if (opt.kind === "mag") att.el.classList.remove("cast");
+    if (crit && tgt.hp > 0 && Math.random() < 0.5){ tgt.stun = true; stunOn(tgt); popNum(tgt, "기절!", "miss"); }
+    await delay(crit ? 420 : 300);
+    if (tgt.hp <= 0) await die(tgt);
+  }
+  async function castAll(att, ab){
+    att.el.classList.add("cast"); await delay(320);
+    for (const e of aliveE()){ let d = magDmg(att, e, ab.power); if (e.defending) d = Math.round(d*0.5);
+      e.hp -= d; sparkAt(e, ab.emo); popNum(e, d); hurtFx(e); updateBattler(e); }
+    shake(true); await delay(440); att.el.classList.remove("cast");
+    for (const e of enemies) if (e.hp <= 0 && !e.el.classList.contains("dead")) await die(e);
   }
 
-  function startBattle(def){
-    stopField();
-    B = { ...def, maxHp: def.hp, defending:false, busy:false, over:false };
-    $id("enemyEmo").textContent = def.emo;
-    $id("enemyName").textContent = def.name;
-    $id("btEnemy").classList.remove("dead");
-    show("scBattle"); setBars(); cmds(true);
-    btMsg(`${def.name}이(가) 나타났다!`);
+  // ---- target / menu ----
+  function clearTargets(){ [...party, ...enemies].forEach(b => { if (!b.el) return; b.el.classList.remove("targetable"); const s = b.el.querySelector(".spr"); if (s) s.onclick = null; }); }
+  function pickTarget(side){
+    return new Promise(res => {
+      const list = side === "enemy" ? aliveE() : aliveH();
+      if (list.length === 1){ res(list[0]); return; }
+      setLog("대상을 선택하세요");
+      list.forEach(b => { b.el.classList.add("targetable"); b.el.querySelector(".spr").onclick = () => { clearTargets(); res(b); }; });
+      renderMenu([{ l:"‹ 취소", sub:true, f:() => { clearTargets(); res(null); } }]);
+    });
   }
-  function playerCmd(c){
-    if (!B || B.busy || B.over) return;
-    B.busy = true; cmds(false); B.defending = false;
-    if (c === "attack"){
-      const d = dmgCalc(P.atk, B.def); B.hp -= d; flashEnemy(); setBars();
-      btMsg(`크루세이더의 공격! ${B.name}에게 ${d} 피해.`);
-      setTimeout(() => { (B.hp <= 0) ? victory() : enemyTurn(); }, 720);
-    } else if (c === "defend"){
-      B.defending = true; btMsg("방어 자세! (받는 피해 감소)");
-      setTimeout(enemyTurn, 600);
-    } else if (c === "flee"){
-      if (Math.random() < 0.55){ btMsg("무사히 도망쳤다!"); setTimeout(endBattle, 700); }
-      else { btMsg("도망치지 못했다!"); setTimeout(enemyTurn, 700); }
+  function mainMenu(h){
+    return new Promise(res => {
+      const main = () => renderMenu([
+        { l:"공격",      f:() => res({k:"attack"}) },
+        { l:"마법·스킬", f:() => renderMenu(abil()) },
+        { l:"아이템",    f:() => renderMenu(itm()) },
+        { l:"방어",      f:() => res({k:"defend"}) },
+        { l:"도망",      f:() => res({k:"flee"}) },
+      ]);
+      const abil = () => { const l = h.abilities.map(ab => ({ l:`${ab.name}${ab.mp?` ${ab.mp}`:""}`, sub:true, dis:h.mp<ab.mp, f:()=>res({k:"abil", ab}) }));
+        l.push({ l:"‹ 뒤로", sub:true, f:main }); return l; };
+      const itm = () => { const l = Object.keys(items).map(k => ({ l:`${k}×${items[k]}`, sub:true, dis:items[k]<=0, f:()=>res({k:"item", item:k}) }));
+        l.push({ l:"‹ 뒤로", sub:true, f:main }); return l; };
+      main();
+    });
+  }
+
+  async function heroTurn(h){
+    setActive(h, true); setLog(h.name + "의 차례 — 명령을 선택");
+    while (true){
+      const c = await mainMenu(h);
+      if (c.k === "defend"){ h.defending = true; clearMenu(); setLog(h.name + " 방어 태세!"); await delay(550); break; }
+      if (c.k === "flee"){ clearMenu(); setLog("도망친다…"); await delay(500);
+        if (Math.random() < 0.5){ setActive(h,false); return "flee"; } setLog("도망치지 못했다!"); await delay(750); continue; }
+      if (c.k === "attack"){ const t = await pickTarget("enemy"); if (!t) continue; clearMenu(); setLog(h.name + "의 공격!"); await act(h, t, {power:1, kind:"phys"}); break; }
+      if (c.k === "abil"){ const ab = c.ab; if (h.mp < ab.mp){ continue; }
+        if (ab.target === "allEnemies"){ clearMenu(); h.mp -= ab.mp; updateBattler(h); setLog(`${h.name} — ${ab.name}!`); await castAll(h, ab); break; }
+        const t = await pickTarget(ab.target === "ally" ? "hero" : "enemy"); if (!t) continue;
+        clearMenu(); h.mp -= ab.mp; updateBattler(h); setLog(`${h.name} — ${ab.name}!`);
+        await act(h, t, { power:ab.power, kind:ab.kind, emo:ab.emo }); break; }
+      if (c.k === "item"){ const k = c.item; if (items[k] <= 0) continue;
+        const t = await pickTarget("hero"); if (!t) continue; clearMenu(); items[k]--;
+        if (k === "포션"){ t.hp = Math.min(t.maxHp, t.hp + 50); popNum(t, "+50", "heal"); }
+        else { t.mp = Math.min(t.maxMp, t.mp + 20); popNum(t, "+20", "heal"); }
+        sparkAt(t, "🧪"); updateBattler(t); setLog(`${k}을(를) 사용했다.`); await delay(700); break; }
+    }
+    setActive(h, false);
+  }
+  async function enemyAct(e){
+    const t = aliveH()[Math.floor(Math.random()*aliveH().length)];
+    if (!t) return;
+    setLog((e.label||e.name) + "의 공격!");
+    await act(e, t, { power:1, kind:"phys" });
+  }
+
+  async function battleLoop(){
+    while (true){
+      const order = [...aliveH(), ...aliveE()].sort((a,b) => b.spd - a.spd);
+      for (const a of order){
+        if (a.hp <= 0) continue;
+        if (!aliveE().length) return victory();
+        if (!aliveH().length) return defeat();
+        a.defending = false; updateBattler(a);
+        if (a.stun){ a.stun = false; stunOff(a); setLog((a.label||a.name) + " 기절 — 행동할 수 없다!"); await delay(850); continue; }
+        if (a.side === "hero"){ const r = await heroTurn(a); if (r === "flee"){ setLog("무사히 도망쳤다!"); clearMenu(); await delay(650); B = null; resumeField(); return; } }
+        else await enemyAct(a);
+        await delay(150);
+      }
     }
   }
-  function enemyTurn(){
-    if (B.over) return;
-    let d = dmgCalc(B.atk, P.def); if (B.defending) d = Math.round(d * 0.5);
-    P.hp -= d; setBars();
-    btMsg(`${B.name}의 공격! 크루세이더가 ${d} 피해.`);
-    setTimeout(() => {
-      if (P.hp <= 0) defeat();
-      else { B.busy = false; cmds(true); btMsg("무엇을 할까?"); }
-    }, 760);
+  async function victory(){
+    party.forEach(h => setActive(h,false)); clearMenu();
+    const exp = enemies.reduce((s,e)=>s+e.exp,0), gold = enemies.reduce((s,e)=>s+e.gold,0);
+    prog.exp += exp; prog.gold += gold;
+    let msg = `승리! EXP +${exp} · 골드 +${gold}`, lv = false;
+    while (prog.exp >= prog.expNext){ prog.exp -= prog.expNext; prog.lv++; prog.expNext = Math.round(prog.expNext*1.5); lv = true;
+      party.forEach(h => { h.maxHp += 10; h.maxMp += 4; h.atk += 2; h.def += 1; h.mag += 2; h.hp = h.maxHp; h.mp = h.maxMp; }); }
+    if (lv) msg += `<br>파티 레벨 업! Lv.${prog.lv} — 능력치 상승!`;
+    party.forEach(updateBattler); setLog(msg);
+    await delay(lv ? 1900 : 1450); B = null; resumeField();
   }
-  function victory(){
-    B.over = true; $id("btEnemy").classList.add("dead");
-    P.exp += B.exp; P.gold += B.gold;
-    let msg = `${B.name}을(를) 쓰러뜨렸다!<br>EXP +${B.exp} · 골드 +${B.gold}`, lvUp = false;
-    while (P.exp >= P.expNext){ P.exp -= P.expNext; P.lv++; P.maxHp += 12; P.hp = P.maxHp; P.atk += 3; P.def += 2; P.expNext = Math.round(P.expNext * 1.5); lvUp = true; }
-    setBars(); if (lvUp) msg += `<br>레벨 업! Lv.${P.lv} (HP/공격/방어 상승)`;
-    btMsg(msg);
-    setTimeout(endBattle, lvUp ? 1700 : 1400);
-  }
-  function defeat(){
-    B.over = true; btMsg("크루세이더는 쓰러졌다…");
-    setTimeout(() => { B = null; show("scTitle"); }, 1700);
-  }
-  function endBattle(){ B = null; resumeField(); }
+  async function defeat(){ clearMenu(); setLog("파티가 전멸했다…"); await delay(1700); B = null; show("scTitle"); }
 
-  document.querySelectorAll("#btCmds button").forEach(b => b.addEventListener("click", () => playerCmd(b.dataset.c)));
+  function startBattle(){
+    stopField();
+    const n = 1 + Math.floor(Math.random()*3);
+    enemies = [];
+    for (let i = 0; i < n; i++){ const d = ENEMY_DEF[Math.floor(Math.random()*ENEMY_DEF.length)];
+      enemies.push({ ...d, side:"enemy", hp:d.maxHp, mp:0, defending:false, stun:false, el:null }); }
+    // 동명 적 구분(A/B/C)
+    const cnt = {}; enemies.forEach(e => cnt[e.name] = (cnt[e.name]||0)+1);
+    const seen = {}; enemies.forEach(e => { if (cnt[e.name] > 1){ seen[e.name] = (seen[e.name]||0); e.label = e.name + " " + "ABC"[seen[e.name]]; seen[e.name]++; } else e.label = e.name; });
+    buildBattlers();
+    show("scBattle");
+    setLog(n > 1 ? "적 무리가 나타났다!" : `${enemies[0].name}이(가) 나타났다!`);
+    B = { on:true };
+    battleLoop();
+  }
 
   show("scTitle");
 </script>
