@@ -148,6 +148,9 @@
   .battler{position:relative; display:flex; flex-direction:column; align-items:center; width:92px; transition:transform .14s ease;}
   .battler .spr{font-size:50px; line-height:1; filter:drop-shadow(0 4px 6px rgba(0,0,0,.55));}
   .heroes .battler .spr{transform:scaleX(-1);}            /* 주인공은 적(왼쪽)을 바라봄 */
+  .battler .spr .hspr{width:66px; height:66px; object-fit:contain; display:block; image-rendering:auto;}
+  .battler .spr .emo{display:block;}
+  .battler .spr.hasimg .emo{display:none;}                /* 스프라이트가 있으면 이모지 숨김 */
   .battler .bname{font-size:11px; color:var(--ink); margin-top:4px; font-family:var(--serif);}
   .battler .bhp,.battler .bmp{width:76px; height:6px; margin-top:3px; background:rgba(0,0,0,.5); border:1px solid var(--line); border-radius:3px; overflow:hidden;}
   .battler .bhp>i{display:block; height:100%; background:linear-gradient(180deg,#5fce7a,#2f8a48); transition:width .3s;}
@@ -620,9 +623,17 @@
   const rnd = (a, b) => a + Math.random() * (b - a);
   const delay = ms => new Promise(r => setTimeout(r, ms));
 
+  // 광민 스프라이트(16포즈) — 파일을 sprites/gwangmin/ 에 넣으면 자동 적용, 없으면 이모지 폴백
+  const GW = "sprites/gwangmin/";
+  const POSE = {
+    idle:GW+"idle.png", stance:GW+"stance.png", walk1:GW+"walk1.png", walk2:GW+"walk2.png", run:GW+"run.png",
+    slashStart:GW+"slash_start.png", slashImpact:GW+"slash_impact.png", heavy:GW+"heavy.png",
+    guard:GW+"guard.png", hit:GW+"hit.png", staggered:GW+"staggered.png", stunned:GW+"stunned.png",
+    knockdown:GW+"knockdown.png", victory:GW+"victory.png", casting:GW+"casting.png", death:GW+"death.png",
+  };
   const PARTY_DEF = [
-    { name:"크루세이더", emoji:"🤺", maxHp:84, maxMp:10, atk:18, def:9,  mag:6,  spd:11,
-      abilities:[ {name:"강타", mp:0, kind:"phys", power:1.8, target:"enemy", emo:"⚔️"} ] },
+    { name:"광민", emoji:"🤺", sprites:POSE, maxHp:84, maxMp:10, atk:18, def:9,  mag:6,  spd:11,
+      abilities:[ {name:"강타", mp:0, kind:"phys", power:1.8, target:"enemy", emo:"⚔️", heavy:true} ] },
     { name:"아리아",   emoji:"🧙", maxHp:52, maxMp:40, atk:9,  def:5,  mag:18, spd:12,
       abilities:[ {name:"파이어", mp:6,  kind:"mag",  power:1.0, target:"enemy",     emo:"🔥"},
                   {name:"라이트닝", mp:14, kind:"mag",  power:0.8, target:"allEnemies", emo:"⚡"} ] },
@@ -657,8 +668,13 @@
     list.forEach(it => { const b = document.createElement("button"); b.textContent = it.l; if (it.sub) b.className = "sub"; if (it.dis) b.disabled = true; b.onclick = it.f; m.appendChild(b); }); }
   const clearMenu = () => { document.getElementById("btMenu").innerHTML = ""; };
   function mkBattler(b){ const d = document.createElement("div"); d.className = "battler " + b.side;
-    d.innerHTML = `<div class="spr">${b.emoji}</div><div class="bname">${b.label||b.name}</div><div class="bhp"><i></i></div>` + (b.side==="hero"?`<div class="bmp"><i></i></div>`:``);
+    const spr = b.sprites
+      ? `<div class="spr"><img class="hspr" alt="" src="${b.sprites.stance}" onload="this.closest('.spr').classList.add('hasimg')" onerror="this.remove()"><span class="emo">${b.emoji}</span></div>`
+      : `<div class="spr"><span class="emo">${b.emoji}</span></div>`;
+    d.innerHTML = spr + `<div class="bname">${b.label||b.name}</div><div class="bhp"><i></i></div>` + (b.side==="hero"?`<div class="bmp"><i></i></div>`:``);
     return d; }
+  function heroPose(b, pose){ if (!b.sprites || !b.el) return; const img = b.el.querySelector(".hspr"); if (img && b.sprites[pose]) img.src = b.sprites[pose]; }
+  function restPose(b){ if (b.side === "hero") heroPose(b, b.hp<=0 ? "death" : (b.stun ? "stunned" : "stance")); }
   function buildBattlers(){
     const es = document.getElementById("enemySide"), hs = document.getElementById("heroSide");
     es.innerHTML = ""; hs.innerHTML = "";
@@ -686,14 +702,14 @@
   // 단일 대상 행동(물리/마법/회복)
   async function act(att, tgt, opt){
     if (opt.kind === "heal"){
-      att.el.classList.add("cast"); await delay(280);
+      att.el.classList.add("cast"); heroPose(att, "casting"); await delay(280);
       const h = Math.round(att.mag*2.4*opt.power); tgt.hp = Math.min(tgt.maxHp, tgt.hp + h);
       sparkAt(tgt, opt.emo||"✨"); popNum(tgt, "+"+h, "heal"); updateBattler(tgt);
-      await delay(420); att.el.classList.remove("cast"); return;
+      await delay(420); att.el.classList.remove("cast"); restPose(att); return;
     }
     const crit = opt.kind === "phys" && Math.random() < 0.18;
-    if (opt.kind === "mag"){ att.el.classList.add("cast"); await delay(300); }
-    else { await lunge(att); }
+    if (opt.kind === "mag"){ att.el.classList.add("cast"); heroPose(att, "casting"); await delay(300); }
+    else { heroPose(att, opt.heavy ? "heavy" : "slashStart"); await lunge(att); if (!opt.heavy) heroPose(att, "slashImpact"); }
     let d = (opt.kind === "mag" ? magDmg(att,tgt,opt.power) : physDmg(att,tgt,opt.power));
     if (crit) d = Math.round(d*1.8);
     if (tgt.defending) d = Math.round(d*0.5);
@@ -701,10 +717,13 @@
     sparkAt(tgt, opt.emo || (crit ? "💥" : "✦"));
     popNum(tgt, d, crit ? "crit" : "");
     hurtFx(tgt); shake(crit || d >= 22); updateBattler(tgt);
+    if (tgt.side === "hero" && tgt.hp > 0) heroPose(tgt, crit ? "staggered" : "hit");
     if (opt.kind === "mag") att.el.classList.remove("cast");
     if (crit && tgt.hp > 0 && Math.random() < 0.5){ tgt.stun = true; stunOn(tgt); popNum(tgt, "기절!", "miss"); }
     await delay(crit ? 420 : 300);
-    if (tgt.hp <= 0) await die(tgt);
+    restPose(att);
+    if (tgt.hp <= 0){ if (tgt.side === "hero") heroPose(tgt, "death"); await die(tgt); }
+    else if (tgt.side === "hero") setTimeout(() => restPose(tgt), 360);
   }
   async function castAll(att, ab){
     att.el.classList.add("cast"); await delay(320);
@@ -746,7 +765,7 @@
     setActive(h, true); setLog(h.name + "의 차례 — 명령을 선택");
     while (true){
       const c = await mainMenu(h);
-      if (c.k === "defend"){ h.defending = true; clearMenu(); setLog(h.name + " 방어 태세!"); await delay(550); break; }
+      if (c.k === "defend"){ h.defending = true; heroPose(h, "guard"); clearMenu(); setLog(h.name + " 방어 태세!"); await delay(550); break; }
       if (c.k === "flee"){ clearMenu(); setLog("도망친다…"); await delay(500);
         if (Math.random() < 0.5){ setActive(h,false); return "flee"; } setLog("도망치지 못했다!"); await delay(750); continue; }
       if (c.k === "attack"){ const t = await pickTarget("enemy"); if (!t) continue; clearMenu(); setLog(h.name + "의 공격!"); await act(h, t, {power:1, kind:"phys"}); break; }
@@ -777,8 +796,8 @@
         if (a.hp <= 0) continue;
         if (!aliveE().length) return victory();
         if (!aliveH().length) return defeat();
-        a.defending = false; updateBattler(a);
-        if (a.stun){ a.stun = false; stunOff(a); setLog((a.label||a.name) + " 기절 — 행동할 수 없다!"); await delay(850); continue; }
+        a.defending = false; updateBattler(a); restPose(a);
+        if (a.stun){ a.stun = false; stunOff(a); setLog((a.label||a.name) + " 기절 — 행동할 수 없다!"); await delay(850); restPose(a); continue; }
         if (a.side === "hero"){ const r = await heroTurn(a); if (r === "flee"){ setLog("무사히 도망쳤다!"); clearMenu(); await delay(650); B = null; resumeField(); return; } }
         else await enemyAct(a);
         await delay(150);
@@ -786,7 +805,7 @@
     }
   }
   async function victory(){
-    party.forEach(h => setActive(h,false)); clearMenu();
+    party.forEach(h => { setActive(h,false); if (h.hp > 0) heroPose(h, "victory"); }); clearMenu();
     const exp = enemies.reduce((s,e)=>s+e.exp,0), gold = enemies.reduce((s,e)=>s+e.gold,0);
     prog.exp += exp; prog.gold += gold;
     let msg = `승리! EXP +${exp} · 골드 +${gold}`, lv = false;
