@@ -345,6 +345,29 @@
   .bp-bar{grid-column:1/3; height:4px; background:rgba(0,0,0,.5); border-radius:2px; overflow:hidden;}
   .bp-bar > i{display:block; height:100%; background:linear-gradient(180deg,#5fce7a,#2f8a48);}
   .bp-bar.low > i{background:linear-gradient(180deg,#e2574a,#a32f2a);}
+
+  /* 전투 결과(리절트) */
+  #scResult{justify-content:center; background:radial-gradient(120% 80% at 50% 20%, rgba(40,32,80,.6), rgba(8,6,16,.92));}
+  .result{width:100%; max-width:340px; margin:0 auto; display:flex; flex-direction:column; gap:14px; padding:24px; animation:rsIn .4s ease;}
+  @keyframes rsIn{from{opacity:0; transform:translateY(14px)}to{opacity:1; transform:none}}
+  .rs-title{font-family:var(--serif); font-weight:800; font-size:34px; text-align:center; letter-spacing:.08em;
+    background:linear-gradient(180deg,#fff7da,#e7bd63 55%,#9c6f2e); -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 2px 10px rgba(230,192,116,.35);}
+  .rs-gain{display:flex; gap:10px;}
+  .rs-g{flex:1; background:rgba(12,20,46,.7); border:1px solid var(--gold-line); border-radius:10px; padding:11px; text-align:center;}
+  .rs-g span{display:block; font-size:11px; color:var(--muted); letter-spacing:.1em;}
+  .rs-g b{font-family:var(--serif); font-size:24px; color:var(--gold);}
+  .rs-sec{background:rgba(12,20,46,.6); border:1px solid var(--line); border-radius:10px; padding:11px 13px;}
+  .rs-sec .rs-h{font-size:11px; color:var(--gold-dim); letter-spacing:.12em; margin-bottom:8px;}
+  .rs-items{display:flex; flex-wrap:wrap; gap:7px;}
+  .rs-chip{font-size:13px; color:var(--ink); background:rgba(40,55,110,.45); border:1px solid var(--gold-line); border-radius:999px; padding:6px 12px;}
+  .rs-ups{display:flex; flex-direction:column; gap:7px;}
+  .rs-up{display:flex; align-items:center; gap:9px; font-family:var(--serif); color:var(--ink); font-size:14px;}
+  .rs-up .rs-emo{font-size:22px;}
+  .rs-up .rs-lv{margin-left:auto; color:var(--gold); font-size:13px;}
+  .rs-ok{align-self:center; margin-top:4px; font-family:var(--serif); font-size:17px; font-weight:600; color:#1c1206;
+    background:linear-gradient(180deg,#f0d28c,#d7a948); border:1px solid #f5dca0; border-radius:11px; padding:13px 44px; cursor:pointer;}
+  .rs-ok:active{transform:scale(.97);}
 </style>
 </head>
 <body>
@@ -408,6 +431,20 @@
       <div class="sheet-title" id="slotTitle">저장</div>
       <div class="sheet-list" id="slotList"></div>
       <button class="sheet-close" id="slotClose">닫기</button>
+    </div>
+  </section>
+
+  <!-- ===== 전투 결과(리절트) ===== -->
+  <section class="screen hidden" id="scResult">
+    <div class="result">
+      <div class="rs-title" id="rsTitle">VICTORY</div>
+      <div class="rs-gain">
+        <div class="rs-g"><span>획득 EXP</span><b id="rsExp">0</b></div>
+        <div class="rs-g"><span>획득 골드</span><b id="rsGold">0</b></div>
+      </div>
+      <div class="rs-sec" id="rsDropsSec"><div class="rs-h">획득 아이템</div><div class="rs-items" id="rsItems"></div></div>
+      <div class="rs-sec" id="rsUpsSec"><div class="rs-h">레벨 업</div><div class="rs-ups" id="rsUps"></div></div>
+      <button class="rs-ok" id="rsOk">확인</button>
     </div>
   </section>
 
@@ -1414,18 +1451,36 @@
     const isBoss = enemies.some(e => e.boss);
     const exp = enemies.reduce((s,e)=>s+e.exp,0), gold = enemies.reduce((s,e)=>s+e.gold,0);
     prog.gold += gold;
-    // 아이템/장비 드롭
-    const drops = [];
-    enemies.forEach(e => (e.drops || []).forEach(d => { if (Math.random() < (d.chance||0)){ items[d.id] = (items[d.id]||0)+1; drops.push(DB[d.id] ? DB[d.id].name : d.id); } }));
-    const ups = [];
-    roster.forEach(h => { const amt = h.row === "reserve" ? Math.round(exp*0.7) : exp; if (gainExp(h, amt)) ups.push(`${h.name} Lv.${h.lv}`); });
+    const drops = [];   // 드롭 아이템 id 목록
+    enemies.forEach(e => (e.drops || []).forEach(d => { if (Math.random() < (d.chance||0)){ items[d.id] = (items[d.id]||0)+1; drops.push(d.id); } }));
+    const ups = [];     // 레벨업 캐릭터 {emoji,name,from,to}
+    roster.forEach(h => { const before = h.lv; const amt = h.row === "reserve" ? Math.round(exp*0.7) : exp; if (gainExp(h, amt)) ups.push({ emoji:h.emoji, name:h.name, from:before, to:h.lv }); });
     party.forEach(updateBattler);
     if (isBoss) prog.bossDefeated = true;
-    let msg = (isBoss ? "👑 보스를 쓰러뜨렸다!<br>" : "승리! ") + `획득 EXP ${exp} · 골드 +${gold}`;
-    if (drops.length) msg += `<br>획득: ${drops.join(", ")}`;
-    if (ups.length)   msg += `<br>레벨 업: ${ups.join(", ")}`;
-    setLog(msg);
-    await delay((isBoss || ups.length || drops.length) ? 2300 : 1500); B = null; resumeField();
+    setLog(isBoss ? "보스를 쓰러뜨렸다!" : "전투에서 승리했다!");
+    await delay(700);
+    await showResult({ isBoss, exp, gold, drops, ups });
+    B = null; resumeField();
+  }
+  function showResult(r){
+    return new Promise(res => {
+      document.getElementById("rsTitle").textContent = r.isBoss ? "BOSS 격파!" : "VICTORY";
+      document.getElementById("rsExp").textContent = r.exp;
+      document.getElementById("rsGold").textContent = r.gold;
+      const dmap = {}; r.drops.forEach(id => dmap[id] = (dmap[id]||0)+1);
+      const keys = Object.keys(dmap);
+      const dropSec = document.getElementById("rsDropsSec");
+      if (keys.length){ dropSec.style.display = "";
+        document.getElementById("rsItems").innerHTML = keys.map(id => `<span class="rs-chip">${DB[id]?DB[id].icon:"❔"} ${DB[id]?DB[id].name:id}${dmap[id]>1?` ×${dmap[id]}`:""}</span>`).join("");
+      } else dropSec.style.display = "none";
+      const upsSec = document.getElementById("rsUpsSec");
+      if (r.ups.length){ upsSec.style.display = "";
+        document.getElementById("rsUps").innerHTML = r.ups.map(u => `<div class="rs-up"><span class="rs-emo">${u.emoji}</span><b>${u.name}</b> <span class="rs-lv">Lv.${u.from} → ${u.to}</span></div>`).join("");
+      } else upsSec.style.display = "none";
+      show("scResult");
+      const ok = document.getElementById("rsOk");
+      ok.onclick = () => { ok.onclick = null; res(); };
+    });
   }
   async function defeat(){ clearMenu(); setLog("파티가 전멸했다…"); await delay(1700); B = null; refreshTitle(); show("scTitle"); }
 
