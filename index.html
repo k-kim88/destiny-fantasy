@@ -135,6 +135,37 @@
   .dlg-text{color:var(--ink); font-size:15px; line-height:1.62;}
   .dlg-next{position:absolute; right:14px; bottom:9px; color:var(--gold); font-size:13px; animation:blink 1.1s infinite;}
   @keyframes blink{50%{opacity:.15}}
+
+  /* ===== 전투 ===== */
+  #scBattle{padding:0; gap:0; justify-content:flex-start;
+    background:radial-gradient(120% 70% at 50% 0%, #281c44 0%, #140d26 55%, #08060f 100%);}
+  .bt-top{flex:1; width:100%; position:relative; display:flex; align-items:center; justify-content:center;}
+  .bt-enemy{text-align:center; transition:opacity .5s, transform .5s;}
+  .bt-enemy.hit{animation:btshake .3s;}
+  @keyframes btshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
+  .bt-enemy.dead{opacity:0; transform:scale(.6) translateY(12px);}
+  .bt-emo{font-size:88px; line-height:1; filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));}
+  .bt-ename{font-family:var(--serif); color:var(--ink); font-size:15px; margin-top:8px; letter-spacing:.04em;}
+  .ebar{width:150px; height:8px; margin:8px auto 0; background:rgba(0,0,0,.5);
+    border:1px solid var(--line); border-radius:4px; overflow:hidden;}
+  .ebar > i{display:block; height:100%; background:linear-gradient(180deg,#e2574a,#a32f2a); transition:width .3s;}
+  .bt-flash{position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none;}
+  .bt-flash.on{animation:fl .2s ease;}
+  @keyframes fl{30%{opacity:.5}100%{opacity:0}}
+  .bt-msg{width:100%; padding:13px 18px; min-height:54px; color:var(--ink); font-size:14.5px; line-height:1.5;
+    background:rgba(9,14,32,.92); border-top:1px solid var(--gold-line); border-bottom:1px solid var(--gold-line);}
+  .bt-player{width:100%; padding:12px 18px 2px;}
+  .bt-prow{display:flex; justify-content:space-between; align-items:baseline;
+    font-family:var(--serif); color:var(--ink); font-size:15px;}
+  .bt-prow .lv{color:var(--gold); font-size:12px;}
+  .pbar{height:12px; margin-top:6px; background:rgba(0,0,0,.5); border:1px solid var(--line); border-radius:6px; overflow:hidden;}
+  .pbar > i{display:block; height:100%; background:linear-gradient(180deg,#5fce7a,#2f8a48); transition:width .3s;}
+  .bt-hp{text-align:right; font-size:12px; color:var(--muted); margin-top:3px;}
+  .bt-cmds{width:100%; padding:10px 16px 20px; display:grid; grid-template-columns:repeat(3,1fr); gap:9px;}
+  .bt-cmds button{font-family:var(--serif); font-size:16px; font-weight:600; color:#1c1206;
+    background:linear-gradient(180deg,#f0d28c,#d7a948); border:1px solid #f5dca0; border-radius:10px; padding:13px 0; cursor:pointer;}
+  .bt-cmds button:active{transform:scale(.97);}
+  .bt-cmds button:disabled{opacity:.38; cursor:default;}
 </style>
 </head>
 <body>
@@ -171,6 +202,29 @@
         <div class="dlg-text" id="dlgText"></div>
         <div class="dlg-next">▼</div>
       </div>
+    </div>
+  </section>
+
+  <!-- ===== 전투 화면 ===== -->
+  <section class="screen hidden" id="scBattle">
+    <div class="bt-top">
+      <div class="bt-enemy" id="btEnemy">
+        <div class="bt-emo" id="enemyEmo">🟢</div>
+        <div class="bt-ename" id="enemyName">슬라임</div>
+        <div class="ebar"><i id="enemyHp" style="width:100%"></i></div>
+      </div>
+      <div class="bt-flash" id="btFlash"></div>
+    </div>
+    <div class="bt-msg" id="btMsg"></div>
+    <div class="bt-player">
+      <div class="bt-prow"><span>크루세이더</span><span class="lv" id="pLv">Lv.1</span></div>
+      <div class="pbar"><i id="pHpBar" style="width:100%"></i></div>
+      <div class="bt-hp" id="pHpText">60 / 60</div>
+    </div>
+    <div class="bt-cmds" id="btCmds">
+      <button data-c="attack">공격</button>
+      <button data-c="defend">방어</button>
+      <button data-c="flee">도망</button>
     </div>
   </section>
 
@@ -362,6 +416,14 @@
       if (canWalk(nx + (vx>0?TILE*0.28:vx<0?-TILE*0.28:0), player.y + TILE*0.30)) player.x = nx;
       const ny = player.y + vy * sp;
       if (canWalk(player.x, ny + (vy>0?TILE*0.34:-TILE*0.10))) player.y = ny;
+
+      // 랜덤 인카운터 (풀밭에서만)
+      const tc = Math.floor(player.x/TILE), tr = Math.floor(player.y/TILE);
+      if (tr>=0 && tr<ROWS && tc>=0 && tc<COLS && MAP[tr][tc]===0){
+        _enc += sp * inp.mag;
+        if (_enc >= _encNext){ _enc = 0; _encNext = TILE*(4+Math.random()*5);
+          startBattle(ENEMIES[Math.floor(Math.random()*ENEMIES.length)]); return; }
+      }
     }
 
     // 가까운 상호작용 대상 → A버튼 강조
@@ -488,7 +550,11 @@
     cx.restore();
   }
 
-  function startField(){
+  function startField(){      // 새 게임 — 상태 초기화
+    resetGame();
+    resumeField();
+  }
+  function resumeField(){      // 필드로 (전투/대화 후 이어서)
     show("scField");
     sizeCanvas();
     running = true; last = performance.now();
@@ -538,6 +604,92 @@
   // 대화창 어디든 탭하면 다음으로
   document.getElementById("dialog").addEventListener("pointerdown", e => { e.preventDefault(); advanceDialog(); });
   window.addEventListener("resize", () => { if (running) sizeCanvas(); });
+
+  /* =========================================================================
+     STEP 4 — 턴제 전투
+     ========================================================================= */
+  const START = { x: player.x, y: player.y };
+  const P = { lv:1, hp:60, maxHp:60, atk:14, def:6, exp:0, expNext:20, gold:0 };
+  const ENEMIES = [
+    { name:"슬라임", emo:"🟢", hp:30, atk:10, def:3, exp:8,  gold:6  },
+    { name:"박쥐",   emo:"🦇", hp:22, atk:13, def:1, exp:9,  gold:5  },
+    { name:"고블린", emo:"👺", hp:48, atk:16, def:6, exp:18, gold:15 },
+  ];
+  let B = null, _enc = 0, _encNext = TILE * 5;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+
+  function resetGame(){
+    player.x = START.x; player.y = START.y; player.face = 1;
+    P.lv=1; P.hp=P.maxHp=60; P.atk=14; P.def=6; P.exp=0; P.expNext=20; P.gold=0;
+    OBJS.forEach(o => { if (o.type === "chest") o.opened = false; });
+    _enc = 0; _encNext = TILE * 5;
+  }
+
+  const $id = (i) => document.getElementById(i);
+  function setBars(){
+    $id("pHpBar").style.width = Math.max(0, P.hp/P.maxHp*100) + "%";
+    $id("pHpText").textContent = Math.max(0, P.hp) + " / " + P.maxHp;
+    $id("pLv").textContent = "Lv." + P.lv;
+    if (B) $id("enemyHp").style.width = Math.max(0, B.hp/B.maxHp*100) + "%";
+  }
+  const btMsg = (s) => { $id("btMsg").innerHTML = s; };
+  const cmds  = (on) => document.querySelectorAll("#btCmds button").forEach(b => b.disabled = !on);
+  const dmgCalc = (atk, dfn) => Math.max(1, Math.round(atk - dfn*0.6 + rnd(-2, 2)));
+  function flashEnemy(){
+    const f = $id("btFlash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
+    const e = $id("btEnemy"); e.classList.remove("hit"); void e.offsetWidth; e.classList.add("hit");
+  }
+
+  function startBattle(def){
+    stopField();
+    B = { ...def, maxHp: def.hp, defending:false, busy:false, over:false };
+    $id("enemyEmo").textContent = def.emo;
+    $id("enemyName").textContent = def.name;
+    $id("btEnemy").classList.remove("dead");
+    show("scBattle"); setBars(); cmds(true);
+    btMsg(`${def.name}이(가) 나타났다!`);
+  }
+  function playerCmd(c){
+    if (!B || B.busy || B.over) return;
+    B.busy = true; cmds(false); B.defending = false;
+    if (c === "attack"){
+      const d = dmgCalc(P.atk, B.def); B.hp -= d; flashEnemy(); setBars();
+      btMsg(`크루세이더의 공격! ${B.name}에게 ${d} 피해.`);
+      setTimeout(() => { (B.hp <= 0) ? victory() : enemyTurn(); }, 720);
+    } else if (c === "defend"){
+      B.defending = true; btMsg("방어 자세! (받는 피해 감소)");
+      setTimeout(enemyTurn, 600);
+    } else if (c === "flee"){
+      if (Math.random() < 0.55){ btMsg("무사히 도망쳤다!"); setTimeout(endBattle, 700); }
+      else { btMsg("도망치지 못했다!"); setTimeout(enemyTurn, 700); }
+    }
+  }
+  function enemyTurn(){
+    if (B.over) return;
+    let d = dmgCalc(B.atk, P.def); if (B.defending) d = Math.round(d * 0.5);
+    P.hp -= d; setBars();
+    btMsg(`${B.name}의 공격! 크루세이더가 ${d} 피해.`);
+    setTimeout(() => {
+      if (P.hp <= 0) defeat();
+      else { B.busy = false; cmds(true); btMsg("무엇을 할까?"); }
+    }, 760);
+  }
+  function victory(){
+    B.over = true; $id("btEnemy").classList.add("dead");
+    P.exp += B.exp; P.gold += B.gold;
+    let msg = `${B.name}을(를) 쓰러뜨렸다!<br>EXP +${B.exp} · 골드 +${B.gold}`, lvUp = false;
+    while (P.exp >= P.expNext){ P.exp -= P.expNext; P.lv++; P.maxHp += 12; P.hp = P.maxHp; P.atk += 3; P.def += 2; P.expNext = Math.round(P.expNext * 1.5); lvUp = true; }
+    setBars(); if (lvUp) msg += `<br>레벨 업! Lv.${P.lv} (HP/공격/방어 상승)`;
+    btMsg(msg);
+    setTimeout(endBattle, lvUp ? 1700 : 1400);
+  }
+  function defeat(){
+    B.over = true; btMsg("크루세이더는 쓰러졌다…");
+    setTimeout(() => { B = null; show("scTitle"); }, 1700);
+  }
+  function endBattle(){ B = null; resumeField(); }
+
+  document.querySelectorAll("#btCmds button").forEach(b => b.addEventListener("click", () => playerCmd(b.dataset.c)));
 
   show("scTitle");
 </script>
