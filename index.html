@@ -295,6 +295,12 @@ body{font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased
 .cut-hint{position:absolute;right:16px;bottom:9px;font-size:13px;color:var(--gold-dim);animation:blink 1.1s infinite;}
 @keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
 #ovl{position:absolute;inset:0;z-index:80;background:rgba(3,6,18,.7);display:none;align-items:center;justify-content:center;padding:18px;}
+#bwipe{position:absolute;inset:0;z-index:120;pointer-events:none;background:#eaf2ff;opacity:0;}
+#bwipe.hide{display:none;}
+#bwipe.go{animation:bflash .8s steps(1,end) forwards;}
+@keyframes bflash{0%{opacity:0}8%{opacity:.95}18%{opacity:.1}30%{opacity:.85}44%{opacity:.1}58%{opacity:.6}74%{opacity:.05}100%{opacity:0}}
+#bfield.bin{animation:binzoom .42s ease-out;}
+@keyframes binzoom{0%{transform:scale(1.16);opacity:.2}100%{transform:scale(1);opacity:1}}
 #ovl .win{width:100%;max-width:330px;}
 #toast{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:90;
   background:var(--glass-2);border:1px solid var(--gold);color:var(--gold);padding:9px 16px;border-radius:8px;
@@ -418,6 +424,7 @@ body{font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased
     <div class="win cut-box"><div class="cut-name" id="cutName"></div><div class="cut-text" id="cutText"></div><div class="cut-hint">▼</div></div>
   </div>
 
+  <div id="bwipe" class="hide"></div>
   <div id="ovl"></div>
 </div>
 
@@ -743,7 +750,7 @@ function updateMove(dt){
   if(G.ch1&&G.ch1!=="free") return;
   const ev=EVENTS.find(e=>e.c===G.px&&e.r===G.py&&!(G.events&&G.events[e.key]));
   if(ev){G.events[ev.key]=1;clearHeld();
-    cutscene(ev.scene,()=>{ if(recruit(ev.key)){renderField();toast(nm(ROSTER.find(r=>r.key===ev.key).name)+" "+(lang==="ko"?"합류!":"加入！"));} });
+    cutscene(ev.scene,()=>{ if(recruit(ev.key)){renderField();toast(nm(ROSTER.find(r=>r.key===ev.key).name)+" "+(lang==="ko"?"합류!":"加入！"));autosave(true);} });
     return;}
   const t=MAP[G.py][G.px];
   if(t===4&&!G.bossDefeated){clearHeld();startBattle(true);return;}
@@ -804,7 +811,7 @@ function startCh1Walk(){ G.ch1="walk"; G.px=1;G.py=5;G.wx=1*TILE+TILE/2;G.wy=5*T
 function ch1ReachAkane(){ G.ch1="prebattle"; clearHeld();
   const B2=ch1Seg("B"); cutscene(B2,startCh1Battle); }
 function startCh1Battle(){ G.ch1="tutbattle";
-  startBattle(false,()=>{ const C=ch1Seg("C"); cutscene(C,()=>{ G.ch1="free"; show("scField"); renderField(); }); }, [mkEnemy("goblin"),mkEnemy("slime")]); }
+  startBattle(false,()=>{ const C=ch1Seg("C"); cutscene(C,()=>{ G.ch1="free"; show("scField"); renderField(); autosave(); }); }, [mkEnemy("goblin"),mkEnemy("slime")]); }
 function renderFieldFrame(ts){
   if($("#scField").classList.contains("hide")||!G){_fieldRAF=0;return;}
   _t=ts; const dt=Math.min(50,(ts-_lastTs)||16); _lastTs=ts;
@@ -831,7 +838,7 @@ function renderFieldFrame(ts){
   // depth sorted objects + player
   const list=[];
   for(const o of _objs){const sx=o.wx-cam.x,sy=o.fy-cam.y;if(sx>-TILE*2&&sx<CANW+TILE*2&&sy>-TILE*3&&sy<CANH+TILE*2)list.push(o);}
-  const pfy=G.py*TILE+TILE-8; list.push({kind:"__player",fy:pfy});
+  const pfy=G.wy; list.push({kind:"__player",fy:pfy});
   list.sort((a,b)=>a.fy-b.fy);
   for(const o of list){ if(o.kind==="__player")drawPlayer(); else drawObj(o); }
   // story markers
@@ -921,9 +928,14 @@ function mkEnemy(k){const b=MONSTERS[k];return {...b,key:k,hp:b.hp,maxHp:b.hp,al
 function startBattle(boss,onWin,fixed){audioInit();
   const enemies=fixed?fixed:(boss?[mkEnemy("dragon")]:rollEnemies());
   B={enemies,boss,queue:[],idx:0,stage:"main",onWin:onWin||null}; G.party.forEach(p=>{p.defending=false;p._ovr=0;});
-  show("scBattle"); $("#fx").innerHTML=""; renderBattle(); startBattleAnim(); SFX.encounter();
-  setMsgTitle(L("cmd")); $("#cmdBody").innerHTML=`<div style="padding:14px;color:var(--ink-2);font-size:13px;">${L("appeared")(nm(enemies[0].name))}</div>`;
-  setTimeout(beginRound,850);
+  SFX.encounter();
+  const w=$("#bwipe"); if(w){w.classList.remove("hide","go");void w.offsetWidth;w.classList.add("go");}
+  setTimeout(()=>{ show("scBattle"); const bf=$("#bfield"); if(bf){bf.classList.remove("bin");void bf.offsetWidth;bf.classList.add("bin");}
+    $("#fx").innerHTML=""; renderBattle(); startBattleAnim();
+    setMsgTitle(L("cmd")); $("#cmdBody").innerHTML=`<div style="padding:14px;color:var(--ink-2);font-size:13px;">${L("appeared")(nm(enemies[0].name))}</div>`;
+    setTimeout(beginRound,600);
+  },340);
+  setTimeout(()=>{ if(w){w.classList.add("hide");w.classList.remove("go");} },820);
 }
 function renderBattle(){ renderRibbon(); renderEnemies(); renderPartySprites(); renderStatWin(); }
 function renderRibbon(){
@@ -945,10 +957,10 @@ function renderPartySprites(){
   const front=[],back=[]; G.party.forEach((p,i)=>(p.row==="back"?back:front).push({p,i}));
   const colHtml=(arr,lab)=>`<div class="bcol"><div class="colhead">${lab}</div>${arr.map(({p,i})=>{
     const dead=p.hp<=0,u=dead?frameURI(p.key,"down",0):frameURI(p.key,"idle",0);
-    const inner=u?`<img id="bspr${i}" class="pix" src="${u}" style="height:${dead?26:46}px">`:spr(p,46);
+    const inner=u?`<img id="bspr${i}" class="pix" src="${u}" style="height:${dead?38:74}px">`:spr(p,70);
     return `<div class="bmem ${dead?'down':''} ${B.cur===i?'acting':''}" data-hi="${i}">
       <div class="cursor" style="display:${B.cur===i?'block':'none'}">▶</div>
-      <div class="bslot" style="width:46px;height:50px;align-items:flex-end;">${inner}</div>
+      <div class="bslot" style="width:74px;height:80px;align-items:flex-end;">${inner}</div>
       <div class="nm">${nm(p.name)}</div></div>`;}).join("")}</div>`;
   $("#partyZone").innerHTML=colHtml(front,L("front"))+colHtml(back,L("back"));
 }
@@ -1092,6 +1104,7 @@ function winBattle(){const gained=B.enemies.reduce((s,e)=>s+e.exp,0),boss=B.boss
   setMsgTitle(L("victory"));$("#cmdBody").innerHTML=`<div style="padding:14px;color:var(--gold);font-size:14px;">${L("victory")}</div><div style="padding:0 14px;color:var(--ink-2);font-size:12px;">${L("gained")(gained)}</div>`;
   const msgs=[];G.party.forEach(p=>{if(p.hp>0){p.exp+=gained;while(levelUp(p,msgs)){}}});
   if(msgs.length){SFX.level();$("#cmdBody").innerHTML+=`<div style="padding:8px 14px 0;color:var(--gold);font-size:12px;">${msgs.join("<br>")}</div>`;}
+  autosave();
   setTimeout(()=>{if(ow){ow();return;}if(boss){G.bossDefeated=true;dialog("🏆 "+(lang==="ko"?"마왕 격파!":"魔王 撃破！"),lang==="ko"?"광민과 동료들은 드래곤을 쓰러뜨렸다. — THE END —":"グァンミンたちはドラゴンを倒した。 — THE END —",()=>{show("scTitle");renderTitle();});}
     else{show("scField");renderField();}},msgs.length?1700:1100);}
 function loseBattle(){SFX.lose();setMsgTitle("GAME OVER");$("#cmdBody").innerHTML=`<div style="padding:14px;color:var(--atk);">${L("wiped")}</div>`;
@@ -1253,6 +1266,7 @@ function loadRaw(){return _rawSave;}
 async function saveGame(){if(!G)return;if(!hasStore){toast(lang==="ko"?"이 환경은 저장 미지원":"セーブ非対応");return;}
   try{await window.storage.set(SAVE_KEY,JSON.stringify(G));_rawSave="1";toast(L("saved"));}catch(e){toast("save fail");}}
 async function loadGame(){if(!hasStore)return false;try{const r=await window.storage.get(SAVE_KEY);if(r){G=JSON.parse(r.value);return true;}}catch(e){}return false;}
+async function autosave(silent){if(!G||!hasStore)return;try{await window.storage.set(SAVE_KEY,JSON.stringify(G));_rawSave="1";if(!silent)toast(lang==="ko"?"자동 저장됨":"オートセーブ");}catch(e){}}
 async function checkSave(){if(!hasStore)return;try{const r=await window.storage.get(SAVE_KEY);_rawSave=r?"1":null;}catch(e){_rawSave=null;}renderTitle();}
 
 /* =========================================================================
@@ -1268,6 +1282,7 @@ const KMAP={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",w:
 document.addEventListener("keydown",e=>{if(KMAP[e.key]&&!$("#scField").classList.contains("hide")){e.preventDefault();setHeld(KMAP[e.key],true);}});
 document.addEventListener("keyup",e=>{if(KMAP[e.key])setHeld(KMAP[e.key],false);});
 $("#btnMenu").onclick=()=>{SFX.menu();openMenu();};
+setInterval(()=>{ if(G&&!$("#scField").classList.contains("hide")&&!_paused&&(!G.ch1||G.ch1==="free")) autosave(true); },60000);
 $("#btnA").onclick=()=>{SFX.menu();startBattle(false);};
 $("#btnB").onclick=()=>{SFX.menu();};
 $("#menuBack").onclick=()=>{SFX.menu();show("scField");renderField();};
