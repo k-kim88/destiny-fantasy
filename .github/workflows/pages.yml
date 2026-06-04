@@ -1,15 +1,8 @@
-name: Deploy PWA to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, "claude/**"]
-    paths:
-      - "index.html"
-      - "manifest.webmanifest"
-      - "sw.js"
-      - "icons/**"
-      - "app/**"
-      - ".github/workflows/pages.yml"
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -17,7 +10,6 @@ permissions:
   pages: write
   id-token: write
 
-# Allow one concurrent deployment
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -30,26 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      # 1) 기존(루트) 단일파일 게임 — 그대로 / 에 배포
-      - name: Assemble root site (v1)
+      - name: Assemble static site
         run: |
-          mkdir -p _site/icons
-          cp index.html manifest.webmanifest sw.js _site/
-          cp -r icons/* _site/icons/
+          mkdir -p _site
+          cp index.html _site/
           touch _site/.nojekyll
-      # 2) 새 구조 프로젝트 — /app/ 경로에 빌드하여 배포
-      - name: Build v2 app
-        working-directory: app
-        run: |
-          npm ci || npm install
-          npm run build
-      - name: Place v2 under /app
-        run: |
-          mkdir -p _site/app
-          cp -r app/dist/* _site/app/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
