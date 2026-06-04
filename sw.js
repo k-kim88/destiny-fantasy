@@ -1,5 +1,5 @@
 /* DESTINY FANTASY — service worker (offline-capable PWA) */
-const VERSION = "df-v1";
+const VERSION = "df-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -28,6 +28,10 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
+
+  // The v2 app under /app/ manages its own assets — never let this SW
+  // intercept it (avoids stale-cache / cross-version interference).
+  if (url.origin === self.location.origin && url.pathname.includes("/app/")) return;
 
   // Navigation requests -> serve cached app shell (offline fallback)
   if (req.mode === "navigate") {
