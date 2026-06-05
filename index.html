@@ -228,6 +228,7 @@
   .st-info .st-lv{font-family:var(--serif); color:var(--gold); font-size:16px;}
   .st-info .st-bar{height:6px; background:rgba(0,0,0,.5); border:1px solid var(--line); border-radius:4px; overflow:hidden; margin:3px 0;}
   .st-info .st-bar > i{display:block; height:100%; background:linear-gradient(180deg,#e6c074,#b8924a);}
+  .st-info .st-bio{margin-top:6px; padding-top:6px; border-top:1px dashed var(--line); color:var(--muted); font-size:11.5px; line-height:1.45;}
   .st-stats{display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; background:rgba(8,12,28,.45); border:1px solid var(--line); border-radius:9px; padding:9px 14px;}
   .st-stats .strow{display:flex; justify-content:space-between; font-size:13px; color:var(--ink);}
   .st-stats .strow em{color:var(--gold); font-style:normal; font-size:11px;}
@@ -1135,7 +1136,14 @@
   function slotsBack(){ if (_slotBack === "menu") backToMenu(); else if (_slotBack === "title"){ refreshTitle(); show("scTitle"); } else resumeField(); }
 
   /* ===== 메뉴(FF/테일즈식) — 통합 진입 ===== */
-  const JOBS = { gwangmin:"용사", leon:"성기사", gangwoo:"권사", aria:"마법사", mir:"사제", jihun:"궁수", sera:"도적", daon:"창기사", rina:"점성술사" };
+  const JOBS = { gwangmin:"용사", akane:"마법사", pooh:"궁수", minmin:"격투가", tachikawa:"힐러" };
+  const BIO = {
+    gwangmin:  "인간 · 한국군 군인 — 임무 수행 중 이세계로 전이당한 청년. 검을 든 용사.",
+    akane:     "인간 · 이세계 주민 — 이제 막 마법에 입문한 초보 마법사. 어느 날 광민과 우연히 만난다.",
+    pooh:      "곰 수인 · 숲의 궁수 — 노란 털을 가진 곰형 수인. 상반신의 털만 붉은색이다.",
+    minmin:    "불곰 수인 · 해방된 전사 — 노예로 잡혀 있던 갈색 털의 불곰형 수인.",
+    tachikawa: "리트리버 수인 · 치유사 — 베이지색 털의 강아지형 수인. 평화롭던 마을이 멸망한 날 광민과 만난다.",
+  };
   function portraitHTML(h){
     const img = h.sprites ? `<img class="pf-img" src="${h.sprites.idle}" onload="this.closest('.eq-portrait').classList.add('hasimg')" onerror="this.remove()">` : "";
     return `${img}<span class="pf-emo">${h.emoji}</span>`;
@@ -1175,7 +1183,8 @@
        <div class="st-ex">EXP ${h.exp} / ${h.expNext}</div>
        <div class="st-bar"><i style="width:${h.exp/h.expNext*100}%"></i></div>
        <div class="st-hp">HP ${h.hp} / ${eStat(h,"maxHp")}　MP ${h.mp} / ${eStat(h,"maxMp")}</div>
-       <div class="st-row2">${h.row==="reserve"?"대기":h.row==="front"?"전열":"후열"}${stIcons(h)?` · 상태 ${stIcons(h)}`:""}</div>`;
+       <div class="st-row2">${h.row==="reserve"?"대기":h.row==="front"?"전열":"후열"}${stIcons(h)?` · 상태 ${stIcons(h)}`:""}</div>
+       ${BIO[h.key]?`<div class="st-bio">${BIO[h.key]}</div>`:""}`;
     document.getElementById("stStats").innerHTML = ["atk","def","mag","spd"].map(k => {
       const bon = eBonus(h,k); return `<div class="strow"><span>${STAT_LABEL[k]}</span><span>${eStat(h,k)}${bon?` <em>(${bon>0?"+":""}${bon})</em>`:""}</span></div>`;
     }).join("");
@@ -1474,17 +1483,13 @@
     shiva:  {name:"소환:시바",   mp:26, kind:"summon", power:1.5, target:"allEnemies", emo:"❄️", glyph:"🧊", summon:"시바"},
     phoenix:{name:"소환:피닉스", mp:30, kind:"summon", power:1.5, target:"allAllies", emo:"🪽", glyph:"🦅", summon:"피닉스"},
   };
-  // 동료 로스터(8인). g: 성장타입(phys/mag), row: 기본 배치
+  // 동료 로스터. g: 성장타입(phys/mag), row: 기본 배치. (남은 3명은 차후 추가)
   const ROSTER_DEF = [
-    { key:"gwangmin", name:"광민", emoji:"🤺", g:"phys", sprites:POSE, row:"front", base:{maxHp:84,maxMp:12,atk:18,def:9, mag:6, spd:11}, abil:["smash"] },
-    { key:"leon",     name:"레온", emoji:"🛡️", g:"phys", row:"front", base:{maxHp:74,maxMp:24,atk:14,def:10,mag:11,spd:9},  abil:["heal","cure","fire"] },
-    { key:"gangwoo",  name:"강우", emoji:"🥊", g:"phys", row:"front", base:{maxHp:92,maxMp:8, atk:19,def:8, mag:4, spd:10}, abil:["smash"] },
-    { key:"aria",     name:"아리아", emoji:"🧙", g:"mag",  row:"back",  base:{maxHp:50,maxMp:42,atk:9, def:5, mag:19,spd:12}, abil:["fire","bolt","ifrit"] },
-    { key:"mir",      name:"미르", emoji:"⛪", g:"mag",  row:"back",  base:{maxHp:56,maxMp:38,atk:10,def:6, mag:16,spd:10}, abil:["heal","cure","fire","phoenix"] },
-    { key:"jihun",    name:"지훈", emoji:"🏹", g:"phys", row:"back",  base:{maxHp:62,maxMp:14,atk:16,def:6, mag:8, spd:15}, abil:["shot"] },
-    { key:"sera",     name:"세라", emoji:"🗡️", g:"phys", row:"reserve", base:{maxHp:60,maxMp:12,atk:17,def:7,mag:6, spd:16}, abil:["smash"] },
-    { key:"daon",     name:"다온", emoji:"🔱", g:"phys", row:"reserve", base:{maxHp:80,maxMp:14,atk:17,def:9,mag:7, spd:9},  abil:["smash"] },
-    { key:"rina",     name:"리나", emoji:"🔮", g:"mag",  row:"reserve", base:{maxHp:48,maxMp:44,atk:8, def:5, mag:20,spd:13}, abil:["fire","bolt","shiva","poisonmagic","sleepmagic"] },
+    { key:"gwangmin",  name:"광민",   emoji:"🤺",   g:"phys", sprites:POSE, row:"front", base:{maxHp:88, maxMp:14, atk:19, def:10, mag:6,  spd:11}, abil:["smash"] },
+    { key:"akane",     name:"아카네", emoji:"🧙‍♀️", g:"mag",  row:"back",  base:{maxHp:46, maxMp:36, atk:8,  def:5,  mag:17, spd:12}, abil:["fire","bolt"] },
+    { key:"pooh",      name:"푸",     emoji:"🧸",   g:"phys", row:"back",  base:{maxHp:72, maxMp:14, atk:17, def:7,  mag:6,  spd:15}, abil:["shot"] },
+    { key:"minmin",    name:"민민",   emoji:"🐻",   g:"phys", row:"front", base:{maxHp:108,maxMp:6,  atk:22, def:10, mag:3,  spd:9},  abil:["smash"] },
+    { key:"tachikawa", name:"타치카와", emoji:"🦮", g:"mag",  row:"back",  base:{maxHp:60, maxMp:40, atk:9,  def:6,  mag:15, spd:11}, abil:["heal","cure"] },
   ];
   function mkHero(d){ return { key:d.key, name:d.name, emoji:d.emoji, sprites:d.sprites||null, g:d.g, row:d.row,
     abilities:d.abil.map(k=>({ ...AB[k] })), side:"hero", lv:1, exp:0, expNext:24,
