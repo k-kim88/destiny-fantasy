@@ -682,6 +682,7 @@
         { c:11, r:17, type:"spring", solid:true, name:"회복의 샘물" },
         { c:2,  r:2,  type:"exit", solid:true, name:"고대 동굴", icon:"🕳️", to:"cave",   spawn:{c:8,r:2} },
         { c:8,  r:20, type:"exit", solid:true, name:"바람의 평원", icon:"🌾", to:"plains", spawn:{c:8,r:2} },
+        { c:8,  r:5,  type:"exit", solid:true, name:"세이블 마을", icon:"🏠", to:"town", spawn:{c:8,r:2} },
       ] },
     plains: { id:"plains", name:"바람의 평원", kicker:"WINDY PLAINS", theme:"plains", start:{c:8,r:2},
       enemies:["늑대","고블린","도적","말벌","메두사"],
@@ -710,6 +711,22 @@
         { c:13, r:14, type:"chest", solid:true, name:"숨겨진 상자", opened:false, gold:400, loot:["amulet","greatsword"] },
         { c:8,  r:13, type:"spring", solid:true, name:"회복의 샘물" },
         { c:8,  r:6,  type:"boss", solid:true, bossId:"caveLord", name:"동굴의 군주", lines:["크르르… 여기까지 온 자는 오랜만이군.","살아 나갈 수 있을 것 같으냐?"] },
+      ] },
+    town: { id:"town", name:"세이블 마을", kicker:"SABLE VILLAGE", theme:"town", start:{c:8,r:4}, safe:true, enemies:[],
+      tiles: toTiles([
+        "1111111111111111","1000000000000001","1001100000011001","1001100000011001",
+        "1000000000000001","1003333333333001","1000000000000001","1001100000011001",
+        "1001100000011001","1000000000000001","1000333333330001","1000000000000001",
+        "1000000000000001","1111111111111111"]),
+      objs:[
+        { c:8,  r:1,  type:"exit", solid:true, name:"마을 밖 — 북부 숲길", icon:"🌳", to:"woods", spawn:{c:8,r:4} },
+        { c:3,  r:6,  type:"inn",  solid:true, name:"여관" },
+        { c:12, r:6,  type:"shop", solid:true, name:"잡화점", lines:["어서 오게, 모험가! 좋은 물건 많네."] },
+        { c:8,  r:11, type:"spring", solid:true, name:"마을 우물" },
+        { c:6,  r:2,  type:"npc",  solid:true, name:"노인", lines:["북쪽 숲에 마물이 부쩍 늘었네…","누군가 나서 줘야 할 텐데. 자네 같은 크루세이더라면…"] },
+        { c:10, r:2,  type:"npc",  solid:true, name:"아이",  lines:["동굴엔 무서운 게 산대요! 절대 가지 마세요!"] },
+        { c:5,  r:9,  type:"npc",  solid:true, name:"병사",  lines:["평원 너머, 동굴 깊은 곳에 '군주'가 있다더군.","가려거든 단단히 준비하게."] },
+        { c:11, r:9, type:"npc",  solid:true, name:"상인",  lines:["여관에서 쉬면 체력과 마력이 회복된다네. 잊지 말게!"] },
       ] },
   };
 
@@ -796,6 +813,12 @@
       openDialog(o.name, o.lines, () => startBoss(o));
     } else if (o.type === "exit"){
       openDialog(o.name, [`${o.name}(으)로 이동할까요?`], () => travelTo(o.to, o.spawn));
+    } else if (o.type === "inn"){
+      openDialog(o.name, o.lines || ["여관에 묵으시겠어요? (무료)"], () => {
+        roster.forEach(t => { t.hp = eStat(t,"maxHp"); t.mp = eStat(t,"maxMp"); cureAll(t); });
+        SFX.heal(); autosave();
+        openDialog(o.name, ["여관의 포근한 침대에서 푹 쉬었다…", "파티의 HP와 MP가 모두 회복되었다!"]);
+      });
     } else if (o.type === "spring"){
       roster.forEach(t => { t.hp = eStat(t,"maxHp"); t.mp = eStat(t,"maxMp"); cureAll(t); });
       SFX.heal(); autosave();
@@ -843,9 +866,9 @@
       const ny = player.y + vy * sp;
       if (canWalk(player.x, ny + (vy>0?TILE*0.34:-TILE*0.10))) player.y = ny;
 
-      // 랜덤 인카운터 (풀밭에서만)
+      // 랜덤 인카운터 (풀밭에서만 · 안전지대 제외)
       const tc = Math.floor(player.x/TILE), tr = Math.floor(player.y/TILE);
-      if (tr>=0 && tr<ROWS && tc>=0 && tc<COLS && MAP[tr][tc]===0){
+      if (!(cur && cur.safe) && tr>=0 && tr<ROWS && tc>=0 && tc<COLS && MAP[tr][tc]===0){
         _enc += sp * inp.mag;
         if (_enc >= _encNext){ _enc = 0; _encNext = TILE*(4+Math.random()*5);
           startBattle(); return; }
@@ -871,7 +894,8 @@
     const c0 = Math.max(0, Math.floor(cam.x/TILE)), c1 = Math.min(COLS-1, Math.ceil((cam.x+VW)/TILE));
     const r0 = Math.max(0, Math.floor(cam.y/TILE)), r1 = Math.min(ROWS-1, Math.ceil((cam.y+VH)/TILE));
     const theme = cur ? cur.theme : "forest";
-    const gA = theme === "plains" ? "#3a6b3e" : "#2f5a32", gB = theme === "plains" ? "#42814a" : "#346134";
+    const gA = theme === "plains" ? "#3a6b3e" : theme === "town" ? "#3f6b46" : "#2f5a32",
+          gB = theme === "plains" ? "#42814a" : theme === "town" ? "#4a7e54" : "#346134";
     // 바닥 타일
     for (let r=r0; r<=r1; r++) for (let c=c0; c<=c1; c++){
       const tile = MAP[r][c], x = c*TILE-cam.x, y = r*TILE-cam.y;
@@ -880,6 +904,13 @@
         else if (tile === 1){ cx.fillStyle = "#15151d"; cx.fillRect(x,y,TILE,TILE); }
         else { cx.fillStyle = ((r+c)&1) ? "#34343e" : "#2c2c35"; cx.fillRect(x,y,TILE,TILE);
           cx.fillStyle = "rgba(0,0,0,.18)"; cx.fillRect(x, y, TILE, 1); }
+      } else if (theme === "town"){
+        if (tile === 2){ cx.fillStyle = "#1d4e8c"; cx.fillRect(x,y,TILE,TILE); }
+        else if (tile === 3){ // 돌 포장길
+          cx.fillStyle = "#9a8f7d"; cx.fillRect(x,y,TILE,TILE);
+          cx.fillStyle = "rgba(0,0,0,.14)"; cx.fillRect(x, y, TILE, 1); cx.fillRect(x, y, 1, TILE);
+          cx.fillStyle = "rgba(255,255,255,.06)"; cx.fillRect(x+TILE*0.5, y+TILE*0.5, TILE*0.42, TILE*0.42);
+        } else { cx.fillStyle = ((r+c)&1) ? gA : gB; cx.fillRect(x,y,TILE,TILE); }
       } else {
         if (tile === 2){ cx.fillStyle = "#1d4e8c"; cx.fillRect(x,y,TILE,TILE);
           cx.fillStyle = "rgba(190,225,240,.12)"; cx.fillRect(x+4, y+TILE*0.4+Math.sin(t*0.003+c)*2, TILE-8, 1); }
@@ -894,7 +925,7 @@
     for (let r=r0; r<=r1+1; r++) for (let c=c0; c<=c1; c++){
       if (r<0||r>=ROWS||MAP[r][c]!==1) continue;
       const wx = c*TILE+TILE/2, wy = r*TILE+TILE;
-      items.push({ fy:wy, draw:()=> theme === "cave" ? drawWall(wx-cam.x, wy-cam.y) : drawTree(wx-cam.x, wy-cam.y) });
+      items.push({ fy:wy, draw:()=> theme === "cave" ? drawWall(wx-cam.x, wy-cam.y) : theme === "town" ? drawHouse(wx-cam.x, wy-cam.y, c+r) : drawTree(wx-cam.x, wy-cam.y) });
     }
     for (const o of OBJS) items.push({ fy:objFY(o), draw:()=>drawObj(o) });
     items.push({ fy:player.y, draw:()=>drawPlayer(player.x-cam.x, player.y-cam.y) });
@@ -926,6 +957,20 @@
     cx.fillStyle = "#2a2a32"; cx.fillRect(sx-TILE*0.42, sy-TILE*0.34, TILE*0.84, TILE*0.34);
     cx.fillStyle = "rgba(0,0,0,.25)"; cx.fillRect(sx-2, sy-TILE*0.9, 4, TILE*0.8);
   }
+  function drawHouse(sx, sy, seed){
+    const roof = ((seed|0)%2) ? "#9c4a3c" : "#7e5a8e";       // 지붕색 변화
+    cx.fillStyle = "rgba(0,0,0,.28)"; cx.beginPath(); cx.ellipse(sx, sy-2, TILE*0.4, TILE*0.13, 0, 0, 7); cx.fill();
+    cx.fillStyle = "#d8c9a8"; cx.fillRect(sx-TILE*0.42, sy-TILE*0.78, TILE*0.84, TILE*0.78);   // 벽
+    cx.fillStyle = "#b8a684"; cx.fillRect(sx-TILE*0.42, sy-TILE*0.18, TILE*0.84, TILE*0.18);   // 토대
+    cx.fillStyle = roof; cx.beginPath();                                                        // 지붕
+    cx.moveTo(sx-TILE*0.52, sy-TILE*0.74); cx.lineTo(sx, sy-TILE*1.16); cx.lineTo(sx+TILE*0.52, sy-TILE*0.74); cx.closePath(); cx.fill();
+    cx.fillStyle = "rgba(255,255,255,.12)"; cx.beginPath();
+    cx.moveTo(sx-TILE*0.52, sy-TILE*0.74); cx.lineTo(sx, sy-TILE*1.16); cx.lineTo(sx-TILE*0.18, sy-TILE*0.74); cx.closePath(); cx.fill();
+    cx.fillStyle = "#5b4128"; cx.fillRect(sx-TILE*0.12, sy-TILE*0.42, TILE*0.24, TILE*0.42);    // 문
+    cx.fillStyle = "#caa24a"; cx.beginPath(); cx.arc(sx+TILE*0.06, sy-TILE*0.2, 1.4, 0, 7); cx.fill();
+    cx.fillStyle = ((seed|0)%2) ? "#f4d97a" : "#a8d4ec";                                         // 창문
+    cx.fillRect(sx-TILE*0.34, sy-TILE*0.62, TILE*0.16, TILE*0.16); cx.fillRect(sx+TILE*0.18, sy-TILE*0.62, TILE*0.16, TILE*0.16);
+  }
   function shadow(sx, sy, w){ cx.fillStyle = "rgba(0,0,0,.26)"; cx.beginPath(); cx.ellipse(sx, sy-2, w, w*0.4, 0, 0, 7); cx.fill(); }
 
   function drawObj(o){
@@ -934,6 +979,7 @@
     else if (o.type === "sign") drawSign(sx, sy);
     else if (o.type === "chest") drawChest(sx, sy, o.opened);
     else if (o.type === "shop") drawEmoObj(sx, sy, "🛒", TILE*0.2);
+    else if (o.type === "inn") drawEmoObj(sx, sy, "🏨", TILE*0.24);
     else if (o.type === "spring") drawSpring(sx, sy);
     else if (o.type === "exit") drawEmoObj(sx, sy, o.icon || "🚪", TILE*0.2);
     else if (o.type === "boss"){ const dead = prog.bosses[o.bossId]; drawEmoObj(sx, sy, dead ? "🪦" : (BOSSES[o.bossId]?BOSSES[o.bossId].emoji:"🐲"), TILE*0.28, !dead); }
@@ -1526,7 +1572,7 @@
     items = DEFAULT_INV();
     prog = { gold:120, bosses:{} };
     Object.values(MAPS).forEach(m => m.objs.forEach(o => { if (o.type === "chest") o.opened = false; }));
-    loadMap("woods");
+    loadMap("town");
   }
 
   // ---- DOM helpers ----
