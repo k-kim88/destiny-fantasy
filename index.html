@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0e1f">
-<title>데스티니 크루세이더</title>
+<title>데스티니 판타지</title>
 <style>
   /* ===== 리셋 / 테마 ===== */
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -398,6 +398,64 @@
   .rs-ok{align-self:center; margin-top:4px; font-family:var(--serif); font-size:17px; font-weight:600; color:#1c1206;
     background:linear-gradient(180deg,#f0d28c,#d7a948); border:1px solid #f5dca0; border-radius:11px; padding:13px 44px; cursor:pointer;}
   .rs-ok:active{transform:scale(.97);}
+
+  /* ===== 언어 버튼 ===== */
+  .lang-btn{position:absolute; top:14px; right:14px; z-index:5; font-family:var(--sans); font-size:12px; color:var(--gold);
+    background:rgba(8,12,28,.6); border:1px solid var(--line); border-radius:9px; padding:7px 12px; cursor:pointer;}
+  .lang-btn:active{transform:scale(.96);}
+
+  /* ===== 스토리 컷신 ===== */
+  #scStory{display:flex; flex-direction:column; justify-content:flex-end; align-items:stretch;
+    padding:0 0 max(20px,env(safe-area-inset-bottom)); overflow:hidden;}
+  .cs-bg{position:absolute; inset:0; z-index:0;
+    background:radial-gradient(120% 80% at 50% 0%, #1a2342 0%, #0c1124 55%, #05070f 100%); transition:background .8s ease;}
+  .cs-bg.night{background:radial-gradient(120% 80% at 50% 0%, #131a30 0%, #080b18 60%, #03040a 100%);}
+  .cs-bg.forest{background:radial-gradient(120% 80% at 50% 10%, #1c3526 0%, #0e1c14 60%, #050b07 100%);}
+  .cs-bg.fire{background:radial-gradient(120% 80% at 50% 80%, #3a1d12 0%, #1a0f0a 55%, #070403 100%);}
+  .cs-bg.dawn{background:radial-gradient(120% 80% at 50% 20%, #3a2c4a 0%, #1c1830 55%, #08060f 100%);}
+  .cs-bg.void{background:radial-gradient(circle at 50% 45%, #2a0d12 0%, #0a0407 60%, #000 100%);}
+  .cs-skip{position:absolute; top:14px; right:14px; z-index:5; font-family:var(--sans); font-size:12px; color:var(--muted);
+    background:rgba(8,12,28,.5); border:1px solid var(--line); border-radius:9px; padding:7px 12px; cursor:pointer;}
+  .cs-skip:active{transform:scale(.96);}
+  .cs-scene{position:absolute; top:0; left:0; right:0; z-index:2; text-align:center; padding-top:54px;
+    font-family:var(--serif); color:var(--gold); letter-spacing:.12em; font-size:15px; opacity:0; transition:opacity .5s;}
+  .cs-scene.show{opacity:1;}
+  .cs-scene .cs-act{display:block; font-size:11px; letter-spacing:.3em; color:var(--muted); margin-bottom:4px;}
+  .cs-stage{position:relative; z-index:1; flex:1; display:flex; align-items:flex-end; justify-content:center; padding-bottom:8px;}
+  .cs-stage .cs-portrait{font-size:74px; filter:drop-shadow(0 8px 18px rgba(0,0,0,.6)); transition:transform .25s, opacity .25s; transform:translateY(8px); opacity:0;}
+  .cs-stage .cs-portrait.show{transform:translateY(0); opacity:1;}
+  .cs-box{position:relative; z-index:3; margin:0 14px; background:linear-gradient(180deg,rgba(12,16,32,.92),rgba(8,11,24,.96));
+    border:1px solid var(--line); border-radius:14px; padding:16px 18px 30px; min-height:96px; box-shadow:0 -6px 30px rgba(0,0,0,.5);}
+  .cs-box.narration{font-style:italic;}
+  .cs-name{font-family:var(--serif); color:var(--gold); font-size:16px; margin-bottom:2px;}
+  .cs-tone{color:var(--muted); font-size:11.5px; margin-bottom:7px;}
+  .cs-text{color:var(--ink); font-size:14.5px; line-height:1.62; letter-spacing:.01em; min-height:1.6em;}
+  .cs-box.narration .cs-text{color:#cdd6ee;}
+  .cs-next{position:absolute; right:14px; bottom:9px; color:var(--gold); font-size:13px; animation:csBob 1s infinite;}
+  @keyframes csBob{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(3px);opacity:1}}
+  .cs-choices{position:absolute; left:0; right:0; bottom:0; z-index:4; display:flex; flex-direction:column; gap:9px;
+    padding:16px 18px max(20px,env(safe-area-inset-bottom)); background:linear-gradient(180deg,rgba(5,7,15,0),rgba(5,7,15,.95) 30%);}
+  .cs-choices .cs-prompt{color:var(--muted); font-size:12.5px; text-align:center; margin-bottom:2px;}
+  .cs-choice{font-family:var(--sans); font-size:14px; color:var(--ink); text-align:left;
+    background:linear-gradient(180deg,rgba(20,26,48,.95),rgba(12,16,32,.95)); border:1px solid var(--line); border-radius:11px;
+    padding:13px 16px; cursor:pointer; transition:transform .1s, border-color .15s;}
+  .cs-choice:active{transform:scale(.985);}
+  .cs-choice .cs-eff{display:block; color:var(--gold-dim); font-size:10.5px; margin-top:3px; letter-spacing:.02em;}
+  /* 스토리 탐색 오버레이 */
+  .cs-objective{position:absolute; top:64px; left:50%; transform:translateX(-50%); z-index:6; max-width:84%;
+    background:rgba(8,12,28,.82); border:1px solid var(--line); border-radius:11px; padding:10px 16px;
+    color:var(--ink); font-size:13px; line-height:1.5; text-align:center; box-shadow:0 4px 18px rgba(0,0,0,.5);}
+  .cs-continue{position:absolute; bottom:max(22px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); z-index:6;
+    font-family:var(--serif); font-size:16px; font-weight:600; color:#1c1206;
+    background:linear-gradient(180deg,#f0d28c,#d7a948); border:1px solid #f5dca0; border-radius:12px; padding:12px 30px;
+    cursor:pointer; box-shadow:0 4px 18px rgba(0,0,0,.45); animation:csGlow 1.4s infinite;}
+  @keyframes csGlow{0%,100%{box-shadow:0 4px 18px rgba(0,0,0,.45)}50%{box-shadow:0 4px 26px rgba(240,210,140,.5)}}
+  .cs-continue:active{transform:translateX(-50%) scale(.97);}
+  body.story-explore #scField .hud-back,
+  body.story-explore #scField .hud-menu,
+  body.story-explore #scField .hud-gold,
+  body.story-explore #scField #aBtn{ display:none !important; }
+  #csChoices.hidden, #csObjective.hidden, #csContinue.hidden{ display:none; }
 </style>
 </head>
 <body>
@@ -405,20 +463,36 @@
 
   <!-- ===== 타이틀 화면 ===== -->
   <section class="screen" id="scTitle">
+    <button class="lang-btn" id="langBtn">🌐 <span id="langLabel">日本語</span></button>
     <div class="logo">
       <span class="word">DESTINY</span>
-      <span class="word small">CRUSADER</span>
+      <span class="word small">FANTASY</span>
     </div>
     <div class="rule"><span class="ln"></span><span class="gem"></span><span class="ln r"></span></div>
-    <div class="sub-ko">데스티니 크루세이더</div>
-    <div class="tagline">운명을 건 십자군의 모험</div>
+    <div class="sub-ko" id="titleSub">데스티니 판타지</div>
+    <div class="tagline" id="titleTag">운명을 건 이방인의 모험</div>
 
     <div class="menu">
-      <button class="item primary" data-a="new">새 게임</button>
-      <button class="item disabled" data-a="cont">이어하기</button>
-      <button class="item" data-a="settings">설정</button>
+      <button class="item primary" data-a="new" id="btnNew">새 게임</button>
+      <button class="item disabled" data-a="cont" id="btnCont">이어하기</button>
+      <button class="item" data-a="settings" id="btnSettings">설정</button>
     </div>
-    <div class="foot">© 2026 · DESTINY CRUSADER · Ver 0.1</div>
+    <div class="foot">© 2026 · DESTINY FANTASY · Ver 0.1</div>
+  </section>
+
+  <!-- ===== 스토리 컷신 화면 ===== -->
+  <section class="screen hidden" id="scStory">
+    <div class="cs-bg" id="csBg"></div>
+    <button class="cs-skip" id="csSkip">건너뛰기 ›</button>
+    <div class="cs-scene" id="csScene"></div>
+    <div class="cs-stage" id="csStage"></div>
+    <div class="cs-box" id="csBox">
+      <div class="cs-name" id="csName"></div>
+      <div class="cs-tone" id="csTone"></div>
+      <div class="cs-text" id="csText"></div>
+      <div class="cs-next" id="csNext">▼</div>
+    </div>
+    <div class="cs-choices hidden" id="csChoices"></div>
   </section>
 
   <!-- ===== 필드(탐험) 화면 ===== -->
@@ -430,6 +504,8 @@
     <div class="hud-gold">🪙 <span id="goldVal">0</span></div>
     <div id="joyBase"><div id="joyKnob"></div></div>
     <button id="aBtn">A</button>
+    <div class="cs-objective hidden" id="csObjective"></div>
+    <button class="cs-continue hidden" id="csContinue">▶ 이야기 계속</button>
     <div id="dialog" class="hidden">
       <div class="dlg-box">
         <div class="dlg-name" id="dlgName"></div>
@@ -639,13 +715,164 @@
     show("scPlaceholder");
   }
 
+  /* =========================================================================
+     언어(KR/JP) + 스토리 컷신 엔진
+     ========================================================================= */
+  let LANG = (() => { try { return localStorage.getItem("dc_lang") || "kr"; } catch(e){ return "kr"; } })();
+  const L = o => o ? (o[LANG] != null ? o[LANG] : o.kr) : "";
+  const UI = {
+    newGame:{kr:"새 게임", jp:"はじめから"},
+    cont:{kr:"이어하기", jp:"つづきから"},
+    settings:{kr:"설정", jp:"設定"},
+    tagline:{kr:"운명을 건 이방인의 모험", jp:"運命を懸けた異邦人の冒険"},
+    skip:{kr:"건너뛰기 ›", jp:"スキップ ›"},
+    continueStory:{kr:"▶ 이야기 계속", jp:"▶ 物語を続ける"},
+    endAct:{kr:"제1막 끝 — 모험을 시작합니다", jp:"第一幕 おわり — 冒険を始めよう"},
+    foeAppear:{kr:"마수 무리가 덤벼든다!", jp:"魔獣の群れが襲いかかる!"},
+  };
+  function applyLang(){
+    $("#langLabel").textContent = LANG === "kr" ? "日本語" : "한국어";
+    $("#titleSub").textContent  = LANG === "kr" ? "데스티니 판타지" : "デスティニーファンタジー";
+    $("#titleTag").textContent  = L(UI.tagline);
+    $("#btnNew").textContent    = L(UI.newGame);
+    $("#btnCont").textContent   = L(UI.cont);
+    $("#btnSettings").textContent = L(UI.settings);
+    $("#csSkip").textContent    = L(UI.skip);
+    $("#csContinue").textContent = L(UI.continueStory);
+    try { document.documentElement.lang = LANG; } catch(e){}
+  }
+  function toggleLang(){ LANG = LANG === "kr" ? "jp" : "kr"; try { localStorage.setItem("dc_lang", LANG); } catch(e){}
+    applyLang(); if (CS && CS.cur) csRerender(); }
+  $("#langBtn").addEventListener("click", toggleLang);
+
+  // 화자별 이모지 · 씬별 배경 테마
+  const SPK = { "광민":"🤺", "준호":"🪖", "아카네":"🧙‍♀️", "???":"🔴" };
+  const SCENE_BG = { S1:"night", S2:"forest", S3:"forest", S4:"fire", S5:"dawn" };
+
+  // ===== 1막 스토리 데이터 (KR/JP) — storyData()는 하단에 정의(함수 호이스팅) =====
+  const STORY = storyData();
+
+  let CS = null;            // 컷신 상태
+  let _battleThen = null;   // 스토리 전투 종료 후 콜백
+  function playStory(){ CS = { si:0, li:0, sub:[], lastScene:null, cur:null }; show("scStory"); csStep(); }
+  function csStep(){
+    let line, scene;
+    if (CS.sub.length){ line = CS.sub.shift(); scene = STORY.scenes[CS.si]; }
+    else {
+      scene = STORY.scenes[CS.si];
+      if (!scene){ csEnd(); return; }
+      if (CS.li >= scene.lines.length){ CS.si++; CS.li = 0; csStep(); return; }
+      line = scene.lines[CS.li++];
+    }
+    CS.cur = line; CS.curScene = scene;
+    csShowScene(scene);
+    if (line.type === "interaction"){
+      $("#csBox").classList.add("hidden"); $("#csChoices").classList.add("hidden");
+      if (line.control === "choice") return csChoice(line);
+      if (line.control === "battle") return csBattle(line);
+      if (line.control === "explore") return csExplore(line);
+      return csStep();
+    }
+    $("#csBox").classList.remove("hidden"); $("#csChoices").classList.add("hidden");
+    csRenderLine(line);
+    $("#csBox").onclick = () => { SFX.menu(); csStep(); };
+  }
+  function csShowScene(scene){
+    if (CS.lastScene === scene.id) return;
+    CS.lastScene = scene.id;
+    const el = $("#csScene");
+    el.innerHTML = `<span class="cs-act">${L(STORY.act_title)}</span>${L(scene.title)}`;
+    $("#csBg").className = "cs-bg " + (SCENE_BG[scene.id] || "");
+    el.classList.add("show");
+    clearTimeout(CS._sceneT); CS._sceneT = setTimeout(() => el.classList.remove("show"), 2800);
+  }
+  function csRenderLine(line){
+    const box = $("#csBox"), isDlg = line.type === "dialogue";
+    box.classList.toggle("narration", !isDlg);
+    const nameEl = $("#csName"), toneEl = $("#csTone");
+    if (isDlg && line.speaker){ nameEl.textContent = L(line.speaker); nameEl.style.display = ""; }
+    else { nameEl.textContent = ""; nameEl.style.display = "none"; }
+    if (isDlg && line.tone){ toneEl.textContent = "(" + L(line.tone) + ")"; toneEl.style.display = ""; }
+    else { toneEl.textContent = ""; toneEl.style.display = "none"; }
+    $("#csText").textContent = L(line.text);
+    const kr = (isDlg && line.speaker) ? line.speaker.kr : null;
+    const st = $("#csStage");
+    if (kr && SPK[kr]){ st.innerHTML = `<div class="cs-portrait">${SPK[kr]}</div>`;
+      requestAnimationFrame(() => { const p = st.querySelector(".cs-portrait"); if (p) p.classList.add("show"); }); }
+    else st.innerHTML = "";
+  }
+  function csChoice(line){
+    const wrap = $("#csChoices"); wrap.classList.remove("hidden"); wrap.innerHTML = "";
+    if (line.prompt){ const p = document.createElement("div"); p.className = "cs-prompt"; p.textContent = L(line.prompt); wrap.appendChild(p); }
+    (line.choices || []).forEach(ch => {
+      const b = document.createElement("button"); b.className = "cs-choice";
+      b.innerHTML = `${L(ch.label)}${ch.effect ? `<span class="cs-eff">${L(ch.effect)}</span>` : ""}`;
+      b.onclick = () => { SFX.menu(); wrap.classList.add("hidden");
+        CS.sub = (ch.result_lines || []).concat(CS.sub); csStep(); };
+      wrap.appendChild(b);
+    });
+  }
+  function csHasMore(){
+    if (CS.sub.length) return true;
+    const sc = STORY.scenes[CS.si];
+    if (sc && CS.li < sc.lines.length) return true;
+    return CS.si < STORY.scenes.length - 1;
+  }
+  function csBattle(line){
+    _battleThen = () => { show("scStory"); csStep(); };
+    startStoryBattle(["슬라임", "고블린", "박쥐"]);
+  }
+  function startStoryBattle(names){
+    party = battleParty();
+    enemies = names.map(nm => { const d = MONS[nm]; return { ...d, side:"enemy", hp:d.maxHp, mp:0, st:{}, defending:false, stun:false, el:null }; });
+    const cnt = {}; enemies.forEach(e => cnt[e.name] = (cnt[e.name]||0)+1);
+    const seen = {}; enemies.forEach(e => { if (cnt[e.name] > 1){ seen[e.name] = (seen[e.name]||0); e.label = e.name + " " + "ABC"[seen[e.name]]; seen[e.name]++; } else e.label = e.name; });
+    buildBattlers();
+    show("scBattle"); SFX.encounter();
+    setLog(L(UI.foeAppear));
+    B = { on:true };
+    battleLoop();
+  }
+  function csExplore(line){
+    if (!csHasMore()){ csEnd(); return; }
+    _storyExplore = true;
+    _storyExploreResume = () => {
+      _storyExplore = false; _storyExploreResume = null;
+      $("#csContinue").classList.add("hidden"); $("#csObjective").classList.add("hidden");
+      document.body.classList.remove("story-explore");
+      stopField(); show("scStory"); csStep();
+    };
+    loadMap("woods", MAPS.woods.start);
+    resumeField();
+    document.body.classList.add("story-explore");
+    const obj = $("#csObjective"); obj.textContent = L(line.text); obj.classList.remove("hidden");
+    const cont = $("#csContinue"); cont.textContent = L(UI.continueStory); cont.classList.remove("hidden");
+  }
+  $("#csContinue").addEventListener("click", () => { if (_storyExploreResume) _storyExploreResume(); });
+  $("#csSkip").addEventListener("click", () => csEnd());
+  function csRerender(){
+    const line = CS.cur; if (!line) return;
+    if (line.type === "interaction"){
+      if (line.control === "choice") csChoice(line);
+      else if (line.control === "explore"){ const o = $("#csObjective"); if (!o.classList.contains("hidden")) o.textContent = L(line.text); }
+    } else { CS.lastScene = null; csShowScene(CS.curScene); csRenderLine(line); }
+  }
+  function csEnd(){
+    CS = null; _storyExplore = false; _storyExploreResume = null; _battleThen = null;
+    $("#csContinue").classList.add("hidden"); $("#csObjective").classList.add("hidden");
+    document.body.classList.remove("story-explore");
+    loadMap("town", MAPS.town.start);
+    resumeField();
+    toast(L(UI.endAct));
+  }
+
   // 타이틀 메뉴
   $$("#scTitle .item").forEach(btn => btn.addEventListener("click", () => {
     if (btn.classList.contains("disabled")) return;
     const a = btn.dataset.a;
     if (a === "new")       startField();
     else if (a === "cont"){ openSlots("load", "title"); }
-    else if (a === "settings") openPlaceholder("설정", "사운드 · 언어 등 설정을 다음 단계에서 추가합니다.");
+    else if (a === "settings") openPlaceholder(L(UI.settings), L({kr:"언어는 우측 상단 🌐 버튼으로 한국어 ↔ 日本語 전환할 수 있습니다.<br>사운드 등 추가 설정은 다음 단계에서.", jp:"言語は右上の🌐ボタンで 한국어 ↔ 日本語 を切り替えできます。<br>サウンドなどの追加設定は次の段階で。"}));
   }));
   function refreshTitle(){ const c = document.querySelector('#scTitle .item[data-a="cont"]'); if (c) c.classList.toggle("disabled", !hasAnySave()); }
 
@@ -829,6 +1056,7 @@
     }
   }
   function pressA(){
+    if (_storyExplore) return;           // 스토리 탐색 중에는 상호작용 비활성
     if (dlg.open){ advanceDialog(); return; }
     const o = nearestObj();
     if (o) interact(o);
@@ -852,6 +1080,7 @@
   }
 
   let raf = 0, last = 0, running = false, t = 0;
+  let _storyExplore = false, _storyExploreResume = null;   // 스토리 탐색 비트 상태
   function loop(ts){
     if (!running) return;
     const dt = Math.min(40, ts - last || 16); last = ts; t = ts;
@@ -867,9 +1096,9 @@
       const ny = player.y + vy * sp;
       if (canWalk(player.x, ny + (vy>0?TILE*0.34:-TILE*0.10))) player.y = ny;
 
-      // 랜덤 인카운터 (풀밭에서만 · 안전지대 제외)
+      // 랜덤 인카운터 (풀밭에서만 · 안전지대/스토리 탐색 제외)
       const tc = Math.floor(player.x/TILE), tr = Math.floor(player.y/TILE);
-      if (!(cur && cur.safe) && tr>=0 && tr<ROWS && tc>=0 && tc<COLS && MAP[tr][tc]===0){
+      if (!_storyExplore && !(cur && cur.safe) && tr>=0 && tr<ROWS && tc>=0 && tc<COLS && MAP[tr][tc]===0){
         _enc += sp * inp.mag;
         if (_enc >= _encNext){ _enc = 0; _encNext = TILE*(4+Math.random()*5);
           startBattle(); return; }
@@ -1057,10 +1286,10 @@
     cx.restore();
   }
 
-  function startField(){      // 새 게임 — 상태 초기화
+  function startField(){      // 새 게임 — 상태 초기화 후 도입부 컷신
     resetGame();
-    resumeField();
     autosave();           // 새 게임 시작 즉시 저장(이어하기 가능)
+    playStory();          // 1막 컷신 → 종료 시 필드로(csEnd)
   }
   function resumeField(){      // 필드로 (전투/대화 후 이어서)
     show("scField");
@@ -1806,13 +2035,14 @@
         // 마비 — 확률로 행동 불가
         if (a.st && a.st.paralyze){ if (--a.st.paralyze <= 0) delete a.st.paralyze; updateBattler(a);
           if (Math.random() < 0.5){ setLog(nm0 + " 은(는) 마비되어 움직일 수 없다!"); await delay(800); _acting=null; renderBP(); continue; } }
-        if (a.side === "hero"){ const r = await heroTurn(a); if (r === "flee"){ setLog("무사히 도망쳤다!"); clearMenu(); await delay(650); B = null; _acting = null; resumeField(); return; } }
+        if (a.side === "hero"){ const r = await heroTurn(a); if (r === "flee"){ setLog("무사히 도망쳤다!"); clearMenu(); await delay(650); B = null; _acting = null; afterBattle(); return; } }
         else await enemyAct(a);
         _acting = null; renderBP();
         await delay(150);
       }
     }
   }
+  function afterBattle(){ if (_battleThen){ const f = _battleThen; _battleThen = null; f(); } else resumeField(); }
   async function victory(){
     party.forEach(h => { setActive(h,false); if (h.hp > 0) heroPose(h, "victory"); }); clearMenu();
     const isBoss = enemies.some(e => e.boss);
@@ -1831,7 +2061,7 @@
     SFX.win();
     await delay(700);
     await showResult({ isBoss, exp, gold, drops, ups, expList });
-    B = null; resumeField();
+    B = null; afterBattle();
   }
   function showResult(r){
     return new Promise(res => {
@@ -1904,6 +2134,103 @@
     battleLoop();
   }
 
+  // ===== 1막 스토리 데이터 정의 (함수 호이스팅으로 상단 storyData() 호출 가능) =====
+  function storyData(){ return {
+    title:{kr:"데스티니 판타지", jp:"デスティニーファンタジー"},
+    act:1, act_title:{kr:"제1막 · 도입부", jp:"第一幕 · 序章"},
+    scenes:[
+      { id:"S1", title:{kr:"그날 밤", jp:"あの夜"}, lines:[
+        { type:"direction", text:{kr:"폭우. 칠흑 같은 야간 작전 지역. 진창을 밟는 군화 소리. 광민이 분대를 이끌고 낮은 자세로 전진한다. 그 뒤에 바짝 붙은 후임, 준호.", jp:"土砂降りの雨。漆黒の夜間作戦地域。ぬかるみを踏む軍靴の音。グァンミンが分隊を率い、低い姿勢で前進する。その後ろにぴたりとついた後輩、ジュンホ。"} },
+        { type:"dialogue", speaker:{kr:"준호",jp:"ジュンホ"}, tone:{kr:"긴장한 목소리, 속삭이듯",jp:"緊張した声、囁くように"}, text:{kr:"…선임님. 이거 무전도 자꾸 끊기고… 좀 이상하지 않습니까?", jp:"…先輩。さっきから無線も途切れるし…なんか、おかしくないですか?"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"앞을 살피며, 차분하게",jp:"前方を警戒しながら、落ち着いて"}, text:{kr:"이상하면 더 붙어 있어. 내 뒤에서 떨어지지 마.", jp:"おかしいならもっと寄っとけ。俺の後ろから離れるな。"} },
+        { type:"dialogue", speaker:{kr:"준호",jp:"ジュンホ"}, tone:{kr:"피식",jp:"ふっと笑って"}, text:{kr:"…역시 선임님 뒤가 제일 안전하죠.", jp:"…やっぱり先輩の後ろが一番安全ですね。"} },
+        { type:"direction", text:{kr:"그 순간, 분대 전원의 장비가 일제히 미쳐 돌아간다. 무전기에서 째지는 잡음, 조준경이 깜빡이고, 나침반 바늘이 정신없이 회전한다.", jp:"その瞬間、分隊全員の装備が一斉に狂い出す。無線機の耳障りなノイズ、照準器が明滅し、コンパスの針が狂ったように回転する。"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"멈칫",jp:"はっと"}, text:{kr:"……뭐야 이거.", jp:"……なんだ、これ。"} },
+        { type:"direction", text:{kr:"공기가 윙— 하고 운다. 두 사람 머리 위 허공에, 유리에 금 가듯 빛의 균열이 번진다. 균열이 짐승처럼 입을 벌리고, 가장 가까이 있던 준호를 빨아들이기 시작한다.", jp:"空気がヴゥン――と鳴る。二人の頭上の虚空に、ガラスにひびが入るように光の亀裂が走る。亀裂は獣のように口を開け、最も近くにいたジュンホを吸い込み始める。"} },
+        { type:"dialogue", speaker:{kr:"준호",jp:"ジュンホ"}, tone:{kr:"발이 땅에서 뜨며",jp:"足が地から浮き上がりながら"}, text:{kr:"선임님—!!", jp:"先輩――!!"} },
+        { type:"direction", text:{kr:"광민이 몸을 던져 준호를 바깥으로 밀쳐낸다. 준호는 진창에 나뒹굴고— 대신, 균열은 광민을 통째로 집어삼킨다.", jp:"グァンミンが身を投げ出してジュンホを外へ突き飛ばす。ジュンホはぬかるみに転がり――代わりに、亀裂はグァンミンを丸ごと飲み込む。"} },
+        { type:"direction", text:{kr:"소리가 사라진다. 무중력의 어둠. 광민의 눈앞으로 정체 모를 붉은 문양이 천천히 회전하며 스친다. 낮고 공허한 목소리가, 아주 먼 곳에서.", jp:"音が消える。無重力の闇。グァンミンの目の前を、得体の知れない赤い紋様がゆっくりと回りながらよぎる。低く虚ろな声が、遥か遠くから。"} },
+        { type:"dialogue", speaker:{kr:"???",jp:"???"}, tone:{kr:"속삭임",jp:"囁き"}, text:{kr:"……돌아왔구나.", jp:"……戻ってきたか。"} },
+        { type:"direction", text:{kr:"암전.", jp:"暗転。"} },
+        { type:"direction", text:{kr:"— 비 내리는 작전 지역. 균열은 흔적도 없이 닫혔다. 진창에 쓰러져 있던 준호가, 천천히 몸을 일으킨다. 흙을 털고, 방금 전 광민이 사라진 허공을 올려다본다. 그의 얼굴에서 긴장이 스르르 빠지고— 입꼬리가 비틀린다.", jp:"――雨の降る作戦地域。亀裂は跡形もなく閉じている。ぬかるみに倒れていたジュンホが、ゆっくりと身を起こす。土を払い、たった今グァンミンが消えた虚空を見上げる。その顔から緊張がすうっと抜け――口元が歪む。"} },
+        { type:"dialogue", speaker:{kr:"준호",jp:"ジュンホ"}, tone:{kr:"나직이",jp:"低く"}, text:{kr:"이걸로… 된 건가.", jp:"これで…済んだか。"} },
+        { type:"direction", text:{kr:"무전기 너머로 분대원들이 그를 다급히 부른다. 준호는 대답하지 않는다.", jp:"無線機の向こうで分隊員たちが彼を必死に呼ぶ。ジュンホは答えない。"} },
+        { type:"dialogue", speaker:{kr:"준호",jp:"ジュンホ"}, text:{kr:"크큭.", jp:"クク。"} },
+      ]},
+      { id:"S2", title:{kr:"다른 하늘 아래", jp:"異なる空の下"}, lines:[
+        { type:"direction", text:{kr:"풀냄새. 낯선 새소리. 광민이 눈을 뜬다. 처음 보는 숲. 올려다본 하늘의 빛깔이— 미묘하게 틀렸다. 너무 푸르거나, 너무 두 개거나.", jp:"草の匂い。聞き慣れない鳥の声。グァンミンが目を開ける。見たこともない森。見上げた空の色が――微妙に違う。青すぎるか、いっそ二つすぎるか。"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"벌떡 일어나며",jp:"がばっと起き上がりながら"}, text:{kr:"……여기 어디야.", jp:"……ここ、どこだ。"} },
+        { type:"direction", text:{kr:"무전기를 켠다. 죽은 잡음뿐. 나침반은 깨졌고, 손목의 장비는 먹통이다. 본능적으로 소총을 그러쥔다. 숨이 가빠지지만— 군인의 훈련이 패닉을 억지로 눌러 앉힌다.", jp:"無線機をつける。死んだノイズだけ。コンパスは割れ、手首の装備はうんともすんとも言わない。本能的に小銃を握りしめる。息が上がるが――軍人の訓練がパニックを無理やり押さえつける。"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"스스로에게, 낮게",jp:"自分に、低く"}, text:{kr:"침착해. 상황 판단부터. ……상황이 뭔지를 모르겠는 게 문제지만.", jp:"落ち着け。まず状況判断だ。……何が状況なのか分からんのが問題だが。"} },
+        { type:"interaction", control:"explore", text:{kr:"낯선 숲을 직접 움직여 둘러보세요. (이동·카메라 조작) — 준비가 되면 ‘이야기 계속’을 누르세요.", jp:"見知らぬ森を実際に動いて見回しましょう。(移動・カメラ操作) — 準備ができたら『物語を続ける』を押してください。"} },
+        { type:"direction", text:{kr:"멀리서, 짐승의 것이라기엔 너무 사람 같은, 사람의 것이라기엔 너무 짐승 같은 울음소리가 들린다.", jp:"遠くで、獣にしては人間くさく、人間にしては獣くさい鳴き声が聞こえる。"} },
+      ]},
+      { id:"S3", title:{kr:"등을 맞대다", jp:"背中を合わせて"}, lines:[
+        { type:"direction", text:{kr:"비명. 여자의 목소리다. 광민이 소리를 향해 달린다. 공터— 로브 차림의 젊은 마법사 아카네가 마수 무리에 몰려 있다. 지팡이 끝에서 불꽃이 피식, 피식 꺼진다.", jp:"悲鳴。女の声だ。グァンミンが声のする方へ走る。開けた空き地――ローブ姿の若い魔法使いアカネが魔獣の群れに追い詰められている。杖の先で炎がぷすっ、ぷすっと消える。"} },
+        { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"지팡이를 휘두르며, 울먹",jp:"杖を振り回し、半泣きで"}, text:{kr:"붙어! 붙으라고! 왜 지금—", jp:"ついて! ついてよ! なんで今に限って――"} },
+        { type:"direction", text:{kr:"마수 한 마리가 광민 쪽으로 고개를 홱 돌린다. 둘 다, 도망칠 곳이 없다. 광민이 아카네 등 뒤로 미끄러져 들어가 등을 맞댄다.", jp:"魔獣の一匹がグァンミンの方へ首をぐるりと向ける。二人とも、逃げ場がない。グァンミンがアカネの背後に滑り込み、背中を合わせる。"} },
+        { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"놀라",jp:"驚いて"}, text:{kr:"뭐, 뭐야 당신!", jp:"な、何なのあんた!"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"소총을 겨누며",jp:"小銃を構えながら"}, text:{kr:"인사는 나중에. 뒤는 내가 본다.", jp:"挨拶は後だ。後ろは俺が見る。"} },
+        { type:"direction", text:{kr:"탕— 탕! 총성이 숲을 찢는다. 마수 둘이 쓰러진다. 아카네가 입을 떡 벌린다. 하지만 곧 노리쇠가 텅 빈 소리를 낸다.", jp:"ダン――ダン! 銃声が森を裂く。魔獣が二匹倒れる。アカネが口をあんぐり開ける。だがすぐに、遊底が空っぽの音を立てる。"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"혀를 차며",jp:"舌打ちして"}, text:{kr:"……역시 안 통하나.", jp:"……やっぱり効かないか。"} },
+        { type:"direction", text:{kr:"광민이 총을 버리고, 마수가 부순 폐허 더미에서 녹슨 검 한 자루를 집어 든다. 빗물에 젖은 칼날이 번뜩인다. 총잡이의 손이, 검을 쥔다.", jp:"グァンミンは銃を捨て、魔獣が壊した瓦礫の山から錆びた剣を一振り拾い上げる。雨に濡れた刃がぎらりと光る。銃を握っていた手が、剣を握る。"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, text:{kr:"그럼, 옛날 방식으로.", jp:"なら、昔ながらのやり方で。"} },
+        { type:"interaction", control:"battle", text:{kr:"첫 전투(튜토리얼) — 마수 무리. 기본 공격·대상 전환·방어로 적을 물리치세요!", jp:"初戦闘(チュートリアル) — 魔獣の群れ。通常攻撃・ターゲット切替・防御で敵を倒そう!"} },
+        { type:"direction", text:{kr:"아카네의 어설픈 불꽃과 광민의 검이 거칠게 맞물린다. 마지막 마수가 비명을 지르며 흩어진다. 정적. 두 사람, 가쁜 숨을 몰아쉬며 서로를 마주 본다— 경계하듯.", jp:"アカネのぎこちない炎とグァンミンの剣が荒々しく噛み合う。最後の魔獣が悲鳴を上げて散る。静寂。二人は荒い息をつきながら、互いを見つめる――警戒するように。"} },
+        { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"지팡이를 겨눈 채",jp:"杖を構えたまま"}, text:{kr:"…그 옷, 그 쇳덩이 무기. 당신, 이 근방 사람 아니죠.", jp:"…その服、その鉄の塊みたいな武器。あんた、この辺の人間じゃないでしょ。"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"검을 내리지 않고",jp:"剣を下ろさず"}, text:{kr:"그러는 너야말로, 여기가 어딘지 좀 알려주면 고맙겠는데. ……솔직히 말하면, 나도 내가 어디 있는지 모르겠거든.", jp:"そういうお前こそ、ここがどこか教えてくれると助かるんだが。……正直に言うと、俺も自分がどこにいるのか分からないんだ。"} },
+      ]},
+      { id:"S4", title:{kr:"세계의 상처", jp:"世界の傷"}, lines:[
+        { type:"direction", text:{kr:"밤. 작은 모닥불. 아카네가 광민을 흘끔거리며, 마지못해 입을 연다.", jp:"夜。小さな焚き火。アカネがグァンミンをちらちら見ながら、しぶしぶ口を開く。"} },
+        { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, text:{kr:"마수가 이렇게 마을 근처까지 내려온 건… 요즘 들어서야. 제국이 변경을 쥐어짜기 시작하면서, 사람들이 떠나고, 마을이 하나둘 사라지고… 세상이 어딘가 잘못 돌아가고 있어.", jp:"魔獣がこんなに村の近くまで下りてくるなんて…最近になってからよ。帝国が辺境を締め上げ始めてから、人が去って、村が一つ、また一つと消えて…世界がどこか、おかしくなってる。"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"불을 보며",jp:"火を見ながら"}, text:{kr:"제국.", jp:"帝国。"} },
+        { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"조심스럽게",jp:"慎重に"}, text:{kr:"……옛 예언에, 그런 말이 있어. 세상이 끝으로 기울 때, 이방에서 한 사람이 온다고. (광민을 빤히 본다)", jp:"……古い予言に、こんな言葉があるの。世界が終わりへ傾くとき、異郷から一人が来る、って。(グァンミンをじっと見る)"} },
+        { type:"interaction", control:"choice", prompt:{kr:"아카네가 기대에 찬 눈으로 빤히 본다. 뭐라고 답할까?", jp:"アカネが期待のこもった目でじっと見る。何と答える?"}, choices:[
+          { id:"A", label:{kr:"…내가 그 용사라는 거야?", jp:"…俺がその勇者だって言うのか?"}, effect:{kr:"관심을 보임 · 아카네 호감↑", jp:"関心を示す · アカネ好感↑"}, result_lines:[
+            { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"눈을 반짝이며",jp:"目を輝かせて"}, text:{kr:"어쩌면! 적어도, 이방인이 이렇게 나타난 게 우연은 아닐지도 몰라.", jp:"もしかしたら! 少なくとも、異郷の人がこんな風に現れたのは偶然じゃないのかも。"} },
+            { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, text:{kr:"……글쎄. 그래도 난, 집에 가는 게 먼저야.", jp:"……さあな。それでも俺は、家に帰るのが先だ。"} },
+          ]},
+          { id:"B", label:{kr:"관심 없어. 난 돌아갈 방법만 알면 돼.", jp:"興味ない。俺は帰る方法さえ分かればいい。"}, effect:{kr:"무심·시크(정통 광민) · 유머", jp:"無関心・クール(王道グァンミン) · ユーモア"}, result_lines:[
+            { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"김 빠진 듯",jp:"拍子抜けして"}, text:{kr:"……엄청 운명적인 분위기였는데.", jp:"……すごく運命的な空気だったのに。"} },
+          ]},
+          { id:"C", label:{kr:"그 예언, 더 자세히 들려줘.", jp:"その予言、もっと詳しく聞かせてくれ。"}, effect:{kr:"세계관 lore 공개 · 복선 강화", jp:"世界観のロア開示 · 伏線強化"}, result_lines:[
+            { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, text:{kr:"전해지는 건 조각뿐이야. '별이 떨어지고, 왕좌가 썩을 때 — 이름 없는 자가 문을 연다.' …딱 그 정도.", jp:"伝わってるのは断片だけ。『星が落ち、王座が朽ちるとき — 名もなき者が扉を開く。』…それくらい。"} },
+            { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, text:{kr:"……수수께끼 같은 소리군. 어쨌든, 난 돌아갈 방법부터.", jp:"……謎かけみたいだな。とにかく、俺は帰る方法が先だ。"} },
+          ]},
+        ]},
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, text:{kr:"운명 같은 거 말고. 돌아갈 방법. 그런 거 아는 사람, 이 세계 어디 없냐.", jp:"運命とかじゃなくて。帰る方法。そういうの知ってる奴、この世界のどこかにいないか。"} },
+        { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"한숨",jp:"ため息"}, text:{kr:"…그런 건 큰 도시 마탑의 현자쯤 돼야 알지도 몰라. 여기서 한참 가야 하는데.", jp:"…そんなの、大きな街の魔法塔の賢者くらいじゃないと分からないわよ。ここからずいぶん行かなきゃ。"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"일어서며",jp:"立ち上がりながら"}, text:{kr:"그럼 거기부터.", jp:"なら、そこからだ。"} },
+        { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"어이없어",jp:"あきれて"}, text:{kr:"잠깐, 같이 가잔 소리야? 나 아직 당신 이름도 모르는데!", jp:"ちょっと、一緒に行くってこと? まだあんたの名前も知らないんだけど!"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, text:{kr:"광민. ……그쪽은?", jp:"グァンミン。……そっちは?"} },
+        { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"머뭇",jp:"口ごもって"}, text:{kr:"…아카네.", jp:"…アカネ。"} },
+      ]},
+      { id:"S5", title:{kr:"출발", jp:"旅立ち"}, lines:[
+        { type:"direction", text:{kr:"아침. 두 사람이 마지못해 나란히 길을 나선다.", jp:"朝。二人がしぶしぶ並んで道を行く。"} },
+        { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"투덜",jp:"ぶつぶつ"}, text:{kr:"미리 말해두는데, 난 길잡이지 보모가 아니야.", jp:"先に言っとくけど、あたしは道案内であって子守りじゃないからね。"} },
+        { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"앞을 보며, 무심하게",jp:"前を見て、素っ気なく"}, text:{kr:"나도 누구 등에 업힐 생각 없어.", jp:"俺も誰かの背に負ぶさるつもりはない。"} },
+        { type:"direction", text:{kr:"길가에, 탐스럽게 익은 빨간 열매가 광민의 눈에 띈다.", jp:"道端に、食べ頃に熟した赤い実がグァンミンの目に留まる。"} },
+        { type:"interaction", control:"choice", prompt:{kr:"처음 보는 빨간 열매. 어떻게 할까?", jp:"見たこともない赤い実。どうする?"}, choices:[
+          { id:"A", label:{kr:"일단 먹어본다", jp:"とりあえず食べてみる"}, effect:{kr:"(개그) 페널티 후 즉시 회복", jp:"(ギャグ) ペナルティ後すぐ回復"}, result_lines:[
+            { type:"direction", text:{kr:"광민이 망설임 없이 열매를 덥석 베어 문다.", jp:"グァンミンが迷わず実をぱくりと齧る。"} },
+            { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"비명",jp:"悲鳴"}, text:{kr:"그거 먹으면 사흘 동안 입에서 불 나온다고—!!", jp:"それ食べたら三日間、口から火が出るって——!!"} },
+            { type:"direction", text:{kr:"광민의 입에서 김이 모락모락. 아카네가 배를 잡고 웃는다.", jp:"グァンミンの口からもうもうと湯気。アカネが腹を抱えて笑う。"} },
+            { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, tone:{kr:"연기를 뿜으며",jp:"煙を吐きながら"}, text:{kr:"……이 세계, 생각보다 빡세네.", jp:"……この世界、思ったよりハードだな。"} },
+          ]},
+          { id:"B", label:{kr:"아카네에게 먼저 물어본다", jp:"先にアカネに訊く"}, effect:{kr:"안전 · 신뢰 형성", jp:"安全 · 信頼の形成"}, result_lines:[
+            { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, text:{kr:"이 빨간 거, 먹어도 되나?", jp:"この赤いの、食べても平気か?"} },
+            { type:"dialogue", speaker:{kr:"아카네",jp:"アカネ"}, tone:{kr:"질겁",jp:"ぎょっと"}, text:{kr:"안 돼! 그거 사흘 동안 입에서 불 나와!!", jp:"ダメ! それ三日間、口から火が出るわよ!!"} },
+            { type:"dialogue", speaker:{kr:"광민",jp:"グァンミン"}, text:{kr:"……안 물어봤으면 큰일 날 뻔했군.", jp:"……訊かなかったら危ないところだったな。"} },
+          ]},
+        ]},
+        { type:"direction", text:{kr:"두 사람의 뒷모습. 그 너머 멀리, 능선 위로 펄럭이는 제국의 깃발과, 하늘로 피어오르는 검은 연기가 보인다. 세계는 이미 기울어 있다.", jp:"二人の後ろ姿。その向こう遠く、稜線の上に翻る帝国の旗と、空へ立ち上る黒煙が見える。世界はすでに傾いている。"} },
+        { type:"direction", text:{kr:"그리고— 길 위에 늘어진 광민의 그림자 속에서, 그 붉은 문양이 아주 잠깐, 어른거린다. 관객만이 본다.", jp:"そして――道に伸びたグァンミンの影の中で、あの赤い紋様がほんの一瞬、揺らめく。観客だけが見る。"} },
+        { type:"interaction", control:"explore", text:{kr:"제1막 종료 → 모험 시작! 마을과 숲을 자유롭게 탐험하세요.", jp:"第一幕終了 → 冒険開始! 村と森を自由に探索しよう。"} },
+      ]},
+    ],
+  }; }
+
+  applyLang();
   refreshTitle();
   show("scTitle");
 </script>
