@@ -103,7 +103,7 @@
   <div style="color:#e6c074;font-weight:700;letter-spacing:.28em;font-size:12px;margin-bottom:6px">게이트 인베이전</div>
   <p class="sub">어느 날 현실에 <b style="color:#c79bff">게이트</b>가 열리고,<br>이세계의 <b style="color:#ff8a8a">마물</b>들이 쏟아져 나왔다.<br>
   같은 순간, 세계 각지에서 미지의 힘에 눈뜬 <b>5인</b>이 모여<br><b style="color:var(--gold)">전대</b>가 되어 맞선다.<br><br>
-  3분을 버텨 <b style="color:#ff7ab0">변신</b>하고, 마물의 물결을 돌파하라!</p>
+  5분을 버텨 <b style="color:#ff7ab0">변신</b>, 20분에 등장하는 보스를 처치하라!</p>
   <div id="titlegold">💰 0</div>
   <button class="btn" id="startbtn">전대 소집</button>
   <button class="btn sec" id="shopbtn">강화 상점</button>
@@ -123,7 +123,7 @@
 <!-- character select -->
 <div id="select" class="overlay hidden">
   <h1 style="font-size:23px">전사 선택</h1>
-  <p class="sub">함께 싸울 전대원을 선택하라.<br>3분 생존 시 각성하여 <b>변신</b>한다.</p>
+  <p class="sub">함께 싸울 전대원을 선택하라.<br>5분 생존 시 각성하여 <b>변신</b>한다.</p>
   <div id="charlist"></div>
   <button class="btn sec" id="backbtn">← 뒤로</button>
 </div>
@@ -208,7 +208,7 @@ function inputVector(){
 /* ============================================================
    DATA
    ============================================================ */
-const MORPH_MS=3*60*1000, SURVIVE_MS=5*60*1000;
+const MORPH_MS=5*60*1000, BOSS_MS=20*60*1000;   // 5분 변신, 20분에 스테이지 보스
 
 const WEAPONS={
   rifle:   {name:"소총 연사",   icon:"🔫", max:8, excl:true},
@@ -253,16 +253,13 @@ const SHEETS={};
 const ROW_DOWN=0, ROW_LEFT=1, ROW_RIGHT=2, ROW_UP=3;
 function hash2(x,y){ let h=(x|0)*374761393 + (y|0)*668265263; h=(h^(h>>>13))*1274126177; return (h>>>0); }
 const STAGE_COLL={
-  city:{gx:64,gy:36,dw:1024,dh:576,bits:"5+gfAAcH8F/n/B/gMA/xX/f8H/ASD/Ef5/wf8AYP8R/n/B/wPA/wH+f+H+g+H/kf5/4f6D4P+B/z+A8gGgcyHwBwAAAAAADABAAAIAAGAAQAAAAAAAAAAAAAAAAAPAAAAAAABHB8AABu4AAA8HwACd8AA/78fwH7/wwPxv5/Bf//TA+6/v9P//9EL77+/0n//wQP/v5/Df//gAHq/n8P//+MB+7wfwP/AAAAAAAPAAAAAAf4AAAAADAAB/wAAAAAuPAAfAAAAAH/8AL8eAAAP/v4Dv/+CeB/+/we//4t+D/7/BL//gwYP/v8EP/+Ccg/+/xY//4JyH///Bn/Toy4P//4Uo9OD3hD4RxCAA4FUAEAABwAHAAAHIfgHAA8AARf"},
-  ruins:{gx:64,gy:36,dw:1024,dh:576,bits:"ARAAAAAAAAAT+AAAwAAAADOAAADAQAAAN4CAAMBgAgg/B4ABwPAGADuHwQHg8AcAeYfgAcBAdwAzg/ABwAC2ADcF4ABgAH4ADgYAAAAAPQAOAAAAAAAAwB4AAAAAAADACAAAAAAAB8AAAAAAACAHwAAAQAAAYAfAAADAAABgD4AACMAAAHAfAAAA4AAAcHwIAAD4AABgeAwAAP6AAHD4DAAA/gAAwPAcAAAoAAAB4B4IAAQAAA/AHh8AAAAAD4AIH4AAAAAGIB4/gAAMAAAwAA/yABwAADCAAPsAXgAAdnAB8wBeAAD/+APHAKAEAP/4D4cAAAQB//gfAgAAAAAH8D4DAAAAAAPAPAAAAAAAB4AcAAAAAAAPAAAAAAAAAAAA"},
-  forest:{gx:64,gy:36,dw:1024,dh:576,bits:"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAEAAAAAAAAwAAAAQAAAAIAAAAHsAAAA8AAAAfwAAAD+AAAD/AAAAP+AAAP+AAAB/4AAA/4AAADPwAAAAAAAABDAAAAAAAAAOAAAAAAAAIAAAAAAAAAAgAAAAAAAAACAAAAAAEQAAIABgAAAfgAAAAvAAAH+AAAAH8AAAf4AAAAf4AAM9gIAAB7gAA4gAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAADIBAAAAAAEAPgEIOAAIAQB+AQB4ADgBAH8BAAAAPgEEfwEAAAA8AwAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
-  snow:{gx:64,gy:36,dw:1024,dh:576,bits:"ADwAAAAAHwAB/AAAIACfAAn+AABgAL/ADf4BAHAAj8AP/gEAcADH0AP8AQBhAA/QB/EACAAAD4AH4QAIAAQPAAPhIAAAJg4AAOAgAAA+AAAAAGAAAD4AAAAE4AAAZAAAQAfAAAAAAgRgB4AAAAASBmAAAAAAAB4GYBgAAQAAfg4ACAgDwAAAAAAALAPwAAAAAAAMA+AAAAAAAAADwAAAAAYAAAAAAwAABgIAAAAD4AQGDwAAAAvgBAA/YAAAGAAMAH+AIAIYAAAA/4AwAgD4AAH/ADAAAfwAAf8BMAAB+GAB/wGwAAP4YAH/iAACA/BgIH8MAAIf+GBgDAwAAxv4AHEAAAAAGfAIcQAAAAAAwAgAAAAAAAAAAAAAAAAAAAAA"},
-  lava:{gx:64,gy:36,dw:1024,dh:576,bits:"AAAAAAAAIAAAAAAAAAPAAQAAAAAAAYAAAADAAAADoAgAAIDAAA8gEAAAAMAADzBgAEAAwAAH8AAAYADgAGfwAABgAcAA/4EAAGAAAAA/wQAAAAAAAD/2AAAAAAAAB7wAAAAAAAAGHgADABAAAgAAAAMAAAAHAAAAA4BAAAYAABAHgYAAAwAAGAACAAAGAAAAAAQACAAAAAAABgAIAAAAAAAHAAAAAAAAAD4AAAAAAAAAYAAAAAAAAADgAAAAADAAZOAAAAAAYAA/gABAAAzgAH8AAEDAD/AA5gAAAMAf+gCPAAAAwA/+AQ+AAADgFf/PBgMAAMAx//gIAwAAAGAX8AADAAAAAAfAAAAAAAAABYAAAAAAAAAAgAAAAAAAAAAA"},
+  ruins:{gx:64,gy:36,dw:1024,dh:576,bits:"AAAAAAAAAAAR2AAAgAAAADOAAADAQAAAN4CAAMBgAgA/B4AAwHAGADuHwAHg8AcAOYfgAMBANwATg/AAwAC2ADcBIAAgAHYADgYAAAAAPQAOAAAAAAAAwB4AAAAAAADAAAAAAAAAB4AAAAAAACAHwAAAQAAAYAfAAADAAABgD4AAAMAAAHAeAAAAwAAAcHwIAAD4AABgeAwAAPyAAHDwDAAA3gAAwPAcAAAoAAAB4BwIAAQAAA/AHB8AAAAAD4AIH4AAAAAEIA4/gAAMAAAwAA/yABwAADAAAPsAXgAANnAB8wBeAAD/+APHACAEAO/4D4cAAAQB//gfAgAAAAAH8B4DAAAAAAPAPAAAAAAAB4AMAAAAAAAPAAAAAAAAAAAA"},
+  forest:{gx:64,gy:36,dw:1024,dh:576,bits:"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAgAAAAAAAAAAAAAAHkAAAA8AAAAfwAAAD+AAAB/AAAAP+AAAP+AAAB/4AAA/4AAADOwAAAAAAAAADAAAAAAAAAOAAAAAAAAIAAAAAAAAAAgAAAAAAAAACAAAAAAEAAAAABgAAAfAAAAAvAAAF8AAAAH8AAAf4AAAAf4AAM9gAAAB7gAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADIBAAAAAAEAPgEIMAAIAAB+AQA4AAgBAH8BAAAAPAEAfwEAAAA8AwAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
+  snow:{gx:64,gy:36,dw:1024,dh:576,bits:"ADwAAAAAHwAB/AAAIACfAAn+AAAgAL/ADf4BAGAAj8AP/gEAcACH0AP8AABhAA/AB/EACAAAD4AH4QAIAAQPAAPhIAAAJA4AAOAgAAA+AAAAAGAAAD4AAAAE4AAAAAAAQAfAAAAAAgRAB4AAAAASBmAAAAAAAB4GYAgAAQAAfgYAAAgDwAAAAAAACAPgAAAAAAAMA+AAAAAAAAADwAAAAAYAAAAAAwAABgAAAAADwAQGDwAAAAvgBAA/YAAACAAMAH+AAAIYAAAA/4AwAgD4AAH/ADAAAfgAAf8BMAAB+CAB/wGAAAP4YAH/CAAAA/BgIH8MAAIf+GBgDAwAAhv4AGEAAAAAGPAIcQAAAAAAQAgAAAAAAAAAAAAAAAAAAAAA"},
+  lava:{gx:64,gy:36,dw:1024,dh:576,bits:"AAAAAAAAIAAAAAAAAAPAAAAAAAAAAYAAAACAAAADgAgAAIDAAAcgEAAAAMAADyBgAAAAwAAHcAAAYADgAGfwAABgAMAA/4EAAGAAAAA/wQAAAAAAAD/2AAAAAAAAB7wAAAAAAAAGHgADAAAAAgAAAAMAAAACAAAAAwBAAAYAABAHAYAAAgAAGAACAAACAAAAAAQACAAAAAAABAAIAAAAAAADAAAAAAAAAD4AAAAAAAAAYAAAAAAAAADgAAAAAAAAJOAAAAAAYAA/gABAAAzgAH8AAEDAD+AA5gAAAMAf+ACPAAAAwA/+AA8AAADgFf8PBgIAAMAg//gAAgAAAGAX8AADAAAAAAfAAAAAAAAABIAAAAAAAAAAgAAAAAAAAAAA"},
 };
 // 스테이지(장소) — 배경 이미지 + 이미지에서 추출한 충돌 마스크 (없으면 16도트 절차 폴백)
 const STAGES={
-  city:{ id:"city", name:"도심", emoji:"🏙️", desc:"마물이 점령한 현대 도시. 도로를 누벼라.", img:"city", coll:STAGE_COLL.city, tint:"rgba(8,10,18,0.20)",
-    pal:["#3a3f47","#33383f","#2c3138","#42474f","#363b43"], dec:"city", s:11 },
   ruins:{ id:"ruins", name:"고대 폐허", emoji:"🏚️", desc:"무너진 성벽과 잔해의 폐허.", img:"ruins", coll:STAGE_COLL.ruins, tint:"rgba(10,10,16,0.24)",
     pal:["#3a3f47","#33383f","#2c3138","#42474f","#363b43"], dec:"city", s:17 },
   forest:{ id:"forest", name:"마경의 숲", emoji:"🌲", desc:"마력이 깃든 어둠의 숲.", img:"forest", coll:STAGE_COLL.forest, tint:"rgba(6,14,9,0.22)",
@@ -411,8 +408,8 @@ function saveMeta(){ try{ localStorage.setItem(META_KEY,JSON.stringify(meta)); }
    STATE
    ============================================================ */
 let state="title", t=0, lastTs=0;
-let player, cam, enemies, gems, shots, orbs, fx, dmgtexts, stage, chests;
-let elapsed=0, kills=0, spawnAcc=0, bossTimer=0;
+let player, cam, enemies, gems, shots, orbs, fx, dmgtexts, stage, chests, pickups;
+let elapsed=0, kills=0, spawnAcc=0, bossTimer=0, crateTimer=0, stageBossSpawned=false, won=false;
 let shakeT=0, shakeMag=0;
 function addShake(m,d){ shakeMag=Math.max(shakeMag,m); shakeT=Math.max(shakeT,d); }
 
@@ -432,13 +429,13 @@ function newPlayer(charKey){
   p.weapons[C.base]=1; p.weapons[C.signature]=1;
   return p;
 }
-let lastStageKey="city";
+let lastStageKey="ruins";
 function startGame(charKey, stageKey){
-  stage = STAGES[stageKey||lastStageKey] || STAGES.city; lastStageKey=stage.id;
+  stage = STAGES[stageKey||lastStageKey] || STAGES.ruins; lastStageKey=stage.id;
   player=newPlayer(charKey);
   const sp=spawnPoint(stage); player.x=sp.x; player.y=sp.y; cam={x:sp.x,y:sp.y};
-  enemies=[]; gems=[]; shots=[]; orbs=[]; fx=[]; dmgtexts=[]; chests=[];
-  elapsed=0; kills=0; spawnAcc=0; bossTimer=0;
+  enemies=[]; gems=[]; shots=[]; orbs=[]; fx=[]; dmgtexts=[]; chests=[]; pickups=[];
+  elapsed=0; kills=0; spawnAcc=0; bossTimer=0; crateTimer=0; stageBossSpawned=false; won=false;
   rebuildOrbs(); state="play";
   ["title","select","stage","over","levelup","shop"].forEach(id=>document.getElementById(id).classList.add("hidden"));
   document.getElementById("hud").classList.remove("hidden");
@@ -454,6 +451,8 @@ const ETYPE={
   wolf: {r:15,hp:32, spd:1.15,dmg:9, xp:2, col:"#9c3b3b", eye:"#ffd24a"},
   tank: {r:23,hp:115,spd:0.7, dmg:14,xp:5, col:"#4a4a5e", eye:"#ff5a5a"},
   boss: {r:42,hp:1050,spd:0.62,dmg:26,xp:60,col:"#2a1230", eye:"#ff3b6b"},
+  stageboss:{r:64,hp:9000,spd:0.78,dmg:40,xp:200,col:"#1a0a22", eye:"#ff2a5a"},
+  crate:{r:14,hp:30,spd:0,dmg:0,xp:0,col:"#7a5326", eye:"#caa46a"},
 };
 function diff(){ return elapsed/60000; }
 function spawnEnemy(type){
@@ -463,6 +462,13 @@ function spawnEnemy(type){
   const ang=Math.random()*TAU, rad=Math.max(W,H)*0.62+40;
   enemies.push({type,x:player.x+Math.cos(ang)*rad,y:player.y+Math.sin(ang)*rad,
     r:b.r,hp:b.hp*hpMul,maxhp:b.hp*hpMul,spd:b.spd,dmg:b.dmg,xp:b.xp,col:b.col,eye:b.eye,hit:0,dmgCd:0,ph:Math.random()*TAU});
+}
+function solidAtWorld(wx,wy){ const st=stage; if(!st||!st.coll)return false; ensureColl(st); const C=st._coll;
+  const ix=Math.floor((((wx%C.dw)+C.dw)%C.dw)/C.cw), iy=Math.floor((((wy%C.dh)+C.dh)%C.dh)/C.ch); return C.mask[iy*C.gx+ix]===1; }
+function spawnCrate(){ let n=0; for(const e of enemies) if(e.type==="crate")n++; if(n>=6)return;
+  for(let tr=0;tr<12;tr++){ const a=Math.random()*TAU, d=rand(130,Math.max(W,H)*0.5);
+    const x=player.x+Math.cos(a)*d, y=player.y+Math.sin(a)*d;
+    if(!solidAtWorld(x,y)){ const b=ETYPE.crate; enemies.push({type:"crate",x,y,r:b.r,hp:b.hp,maxhp:b.hp,spd:0,dmg:0,xp:0,col:b.col,eye:b.eye,hit:0,dmgCd:0,ph:0}); return; } }
 }
 function updateSpawns(dt){
   const d=diff();
@@ -475,9 +481,11 @@ function updateSpawns(dt){
     if(d>1.1&&roll>0.66&&type==="bat")type=Math.random()<0.5?"wolf":"bat";
     spawnEnemy(type);
   }
-  // 첫 보스는 변신 직후(약 3분), 이후 60초 간격
+  // 미니 보스: 90초마다 (스테이지 보스 전까지)
   bossTimer+=dt;
-  if(elapsed>=75000 && bossTimer>=60000){ bossTimer-=60000; spawnEnemy("boss"); flash("⚠ 게이트에서 거대 마물 출현!"); }
+  if(elapsed>=90000 && elapsed<BOSS_MS && bossTimer>=90000){ bossTimer-=90000; spawnEnemy("boss"); flash("⚠ 거대 마물 출현!"); }
+  // 나무상자: 약 10초마다
+  crateTimer+=dt; if(crateTimer>=10000){ crateTimer-=10000; spawnCrate(); }
 }
 
 /* ============================================================
@@ -511,12 +519,17 @@ function tickWeapons(dt){
       shots.push({x:player.x,y:player.y,sx:player.x,sy:player.y,tx:tgt.x,ty:tgt.y,t:0,dur:520,kind:"grenade",blast,dmg});
     } else T.grenade=300;
   }
-  // 음파 마이크 (아카네 기본) — 사방으로 퍼지는 음파 충격
+  // 음파 마이크 (아카네 기본) — 한 방향으로 날리는 음파 파동
   if(wlv("sonic")>0 && (T.sonic||0)<=0){
-    const L=wlv("sonic"); T.sonic=(1050-L*60)*cdMul();
-    const maxr=(95+L*16)*area(), dmg=(7+L*4)*might();
-    shots.push({kind:"ring",x:player.x,y:player.y,t:0,dur:520,maxr,dmg,band:16,hitset:new Set()});
-    if(L>=5) shots.push({kind:"ring",x:player.x,y:player.y,t:-180,dur:520,maxr:maxr*0.7,dmg:dmg*0.7,band:14,hitset:new Set()});
+    const L=wlv("sonic"); const tgt=nearestEnemy(player.x,player.y,520);
+    if(tgt){ T.sonic=(900-L*55)*cdMul();
+      const dmg=(8+L*4)*might(), pierce=99, spd=6.2, life=(360+L*18);
+      const a0=Math.atan2(tgt.y-player.y,tgt.x-player.x);
+      const count=1+Math.floor(L/4); // 4,8레벨에 추가 파동(부채꼴)
+      for(let i=0;i<count;i++){ const a=a0+(i-(count-1)/2)*0.22;
+        shots.push({kind:"wave",x:player.x,y:player.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,ang:a,dmg,life,grow:0.6+L*0.06,r:10,kind2:0,hitset:new Set()}); }
+      player.face=Math.cos(a0)<0?-1:1;
+    } else T.sonic=160;
   }
   // 반짝임 (아카네 전용) — 보호막 + 반짝임 노바
   if(wlv("sparkle")>0 && (T.sparkle||0)<=0){
@@ -569,11 +582,19 @@ function updateOrbs(dt){ const L=wlv("drone"); if(L<=0)return;
    ============================================================ */
 function hurtEnemy(e,dmg){ e.hp-=dmg; e.hit=t; dmgtexts.push({x:e.x,y:e.y-e.r,txt:Math.round(dmg),t:0}); if(e.hp<=0)killEnemy(e); }
 function knock(e,fx_,fy,p){ const a=Math.atan2(e.y-fy,e.x-fx_); e.x+=Math.cos(a)*p; e.y+=Math.sin(a)*p; }
-function killEnemy(e){ e.dead=true; kills++;
+function killEnemy(e){ e.dead=true;
+  if(e.type==="crate"){ // 나무상자: 부수면 회복 포션/골드
+    for(let i=0;i<6;i++) fx.push({kind:"spark",x:e.x,y:e.y,vx:rand(-3,3),vy:rand(-3,3),t:0,dur:340,col:"#caa46a"});
+    if(Math.random()<0.45) pickups.push({x:e.x,y:e.y,kind:"heal",vx:rand(-1,1),vy:rand(-1,1)});
+    else pickups.push({x:e.x,y:e.y,kind:"gold",amt:8+((Math.random()*10)|0),vx:rand(-1,1),vy:rand(-1,1)});
+    return;
+  }
+  kills++;
   gems.push({x:e.x,y:e.y,v:e.xp,vx:rand(-1,1),vy:rand(-1,1)});
-  if(e.type==="boss"){ for(let i=0;i<8;i++)gems.push({x:e.x+rand(-20,20),y:e.y+rand(-20,20),v:8,vx:rand(-2,2),vy:rand(-2,2)}); player.hp=Math.min(player.maxhp,player.hp+20);
-    chests.push({x:e.x,y:e.y,vx:0,vy:0}); flash("🎁 전리품 상자 출현!"); }
-  for(let i=0;i<(e.type==="boss"?20:5);i++) fx.push({kind:"spark",x:e.x,y:e.y,vx:rand(-3,3),vy:rand(-3,3),t:0,dur:380,col:e.col});
+  if(e.type==="boss"||e.type==="stageboss"){ for(let i=0;i<10;i++)gems.push({x:e.x+rand(-24,24),y:e.y+rand(-24,24),v:8,vx:rand(-2,2),vy:rand(-2,2)}); player.hp=Math.min(player.maxhp,player.hp+25);
+    chests.push({x:e.x,y:e.y,vx:0,vy:0}); flash("🎁 전리품 상자 출현!"); addShake(6,200); }
+  for(let i=0;i<(e.type==="bat"||e.type==="wolf"?5:18);i++) fx.push({kind:"spark",x:e.x,y:e.y,vx:rand(-3,3),vy:rand(-3,3),t:0,dur:380,col:e.col});
+  if(e.type==="stageboss"){ win(); }
 }
 
 /* ============================================================
@@ -636,7 +657,7 @@ function renderMorphCutscene(){
 function update(dt){
   t+=dt; elapsed+=dt;
   if(!player.morphed && elapsed>=MORPH_MS){ startMorph(); return; }
-  if(elapsed>=SURVIVE_MS){ win(); return; }
+  if(elapsed>=BOSS_MS && !stageBossSpawned){ stageBossSpawned=true; spawnEnemy("stageboss"); flash("☠ 스테이지 보스 출현! 처치하면 클리어"); }
 
   const iv=inputVector();
   if(iv.mag>0.05){ player.x+=iv.x*player.speed*(dt/16.6); player.y+=iv.y*player.speed*(dt/16.6);
@@ -658,9 +679,9 @@ function update(dt){
   for(const e of enemies){
     const a=Math.atan2(player.y-e.y,player.x-e.x), wob=Math.sin(t*0.005+e.ph)*0.25;
     e.x+=Math.cos(a+wob)*e.spd*(dt/16.6); e.y+=Math.sin(a+wob)*e.spd*(dt/16.6);
-    if(e.type!=="boss"){ if(imgReady(stage)) collideMask(e); else for(const o of solids) collideBox(e,o); }   // 마물도 벽에 막힘(보스는 통과)
+    if(e.type!=="boss"&&e.type!=="stageboss"){ if(imgReady(stage)) collideMask(e); else for(const o of solids) collideBox(e,o); }   // 마물도 벽에 막힘(보스류 통과)
     e.dmgCd-=dt;
-    if(dist2(player.x,player.y,e.x,e.y)<(e.r+player.r)**2 && e.dmgCd<=0 && player.invuln<=0){ e.dmgCd=600; damagePlayer(e.dmg); }
+    if(e.dmg>0 && dist2(player.x,player.y,e.x,e.y)<(e.r+player.r)**2 && e.dmgCd<=0 && player.invuln<=0){ e.dmgCd=600; damagePlayer(e.dmg); }
   }
   for(let i=0;i<enemies.length;i++){ const a=enemies[i];
     for(let j=i+1;j<i+6&&j<enemies.length;j++){ const b=enemies[j]; const dd=dist2(a.x,a.y,b.x,b.y),mr=a.r+b.r;
@@ -679,6 +700,9 @@ function update(dt){
         for(const e of enemies){ if(s.hitset.has(e))continue; const d=Math.hypot(e.x-s.x,e.y-s.y);
           if(Math.abs(d-rr)<s.band+e.r){ hurtEnemy(e,s.dmg); knock(e,s.x,s.y,3); s.hitset.add(e); } } }
       if(s.t>=s.dur)s.dead=true;
+    } else if(s.kind==="wave"){ s.x+=s.vx*(dt/16.6); s.y+=s.vy*(dt/16.6); s.r+=s.grow*(dt/16.6); s.life-=dt;
+        for(const e of enemies){ if(s.hitset.has(e))continue; if(dist2(s.x,s.y,e.x,e.y)<(s.r+e.r)**2){ hurtEnemy(e,s.dmg); knock(e,s.x,s.y,3); s.hitset.add(e); } }
+        if(s.life<=0)s.dead=true;
     }
   }
   shots=shots.filter(s=>!s.dead);
@@ -699,6 +723,14 @@ function update(dt){
     if(dd<mag*mag){ const a=Math.atan2(player.y-g.y,player.x-g.x), pull=clamp(mag*mag/dd*0.6,0.5,9); g.x+=Math.cos(a)*pull; g.y+=Math.sin(a)*pull; }
     if(dd<(player.r+8)**2){ g.dead=true; gainXP(g.v); } }
   gems=gems.filter(g=>!g.dead);
+
+  for(const pk of pickups){ pk.x+=pk.vx; pk.y+=pk.vy; pk.vx*=0.86; pk.vy*=0.86;
+    const dd=dist2(player.x,player.y,pk.x,pk.y);
+    if(dd<mag*mag){ const a=Math.atan2(player.y-pk.y,player.x-pk.x),pull=clamp(mag*mag/dd*0.6,0.5,9); pk.x+=Math.cos(a)*pull; pk.y+=Math.sin(a)*pull; }
+    if(dd<(player.r+11)**2){ pk.dead=true;
+      if(pk.kind==="heal"){ player.hp=Math.min(player.maxhp,player.hp+Math.round(player.maxhp*0.3)); flash("❤ 회복!"); }
+      else { meta.gold+=pk.amt; saveMeta(); flash("💰 +"+pk.amt); } } }
+  pickups=pickups.filter(p=>!p.dead);
 
   // 전리품 상자: 자석으로 끌어와 획득 시 룰렛
   for(const ch of chests){ const dd=dist2(player.x,player.y,ch.x,ch.y);
@@ -743,7 +775,7 @@ function pickN(arr,n){ const a=arr.slice(),out=[]; while(a.length&&out.length<n)
 function wepDesc(k,lvl){ switch(k){
   case "rifle":return `자동 사격. 탄환 ${1+Math.floor(lvl/2)}발 · 피해/관통 상승`;
   case "grenade":return "가까운 적에게 수류탄을 던져 광역 폭발 (광민 전용)";
-  case "sonic":return "사방으로 음파 충격파를 발산 (아카네 전용)";
+  case "sonic":return "가장 가까운 적에게 음파 파동을 날린다 (관통, 아카네 전용)";
   case "sparkle":return `반짝임 보호막 ${1+Math.ceil(lvl/2)}회 방어 + 노바 (아카네 전용)`;
   case "fist":return "곰의 발톱으로 주변을 할퀴어 빠르게 연타·넉백 (민민 전용)";
   case "slam":return "땅을 부숴 충격파로 적을 멀리 날린다 (민민 전용)";
@@ -842,13 +874,14 @@ function refreshWepRow(){ const row=document.getElementById("weprow"); row.inner
 function updateHUD(){
   document.getElementById("xpfill").style.width=(player.xp/player.xpNext*100)+"%";
   document.getElementById("lvchip").textContent=CHARS[player.char].name+" · Lv "+player.level;
-  document.getElementById("timer").textContent=fmtTime(elapsed);
+  document.getElementById("timer").textContent=fmtTime(Math.min(elapsed,BOSS_MS));
   document.getElementById("killchip").textContent="☠ "+kills;
   document.getElementById("hpfill").style.width=(player.hp/player.maxhp*100)+"%";
   document.getElementById("hptext").textContent=Math.ceil(player.hp)+" / "+player.maxhp;
   const mc=document.getElementById("morphchip");
-  if(player.morphed) mc.textContent="⚡ "+CHARS[player.char].morphName;
-  else mc.textContent="변신까지 "+fmtTime(MORPH_MS-elapsed);
+  if(!player.morphed) mc.textContent="변신까지 "+fmtTime(MORPH_MS-elapsed);
+  else if(!stageBossSpawned) mc.textContent="⚡"+CHARS[player.char].morphName+" · 보스 "+fmtTime(BOSS_MS-elapsed);
+  else mc.textContent="☠ 스테이지 보스전!";
 }
 let flashMsg=null, flashT=0;
 function flash(msg){ flashMsg=msg; flashT=2200; }
@@ -858,7 +891,7 @@ function flash(msg){ flashMsg=msg; flashT=2200; }
    ============================================================ */
 function w2s(x,y){ return [x-cam.x+W/2, y-cam.y+H/2]; }
 function drawGround(){
-  const st=stage||STAGES.city;
+  const st=stage||STAGES.ruins;
   if(imgReady(st)){ const img=BG[st.img], iw=img.naturalWidth, ih=img.naturalHeight;
     let ox=(W/2-cam.x)%iw; if(ox>0)ox-=iw; let oy=(H/2-cam.y)%ih; if(oy>0)oy-=ih;
     for(let x=ox;x<W+iw;x+=iw)for(let y=oy;y<H+ih;y+=ih) cx.drawImage(img,Math.floor(x),Math.floor(y));
@@ -881,10 +914,10 @@ function drawEnemy(e){
   cx.fillStyle="rgba(0,0,0,.35)"; cx.beginPath(); cx.ellipse(sx,sy+e.r*0.7,e.r*0.82,e.r*0.32,0,0,TAU); cx.fill();
   const bob=Math.sin(t*0.006+e.ph)*e.r*0.12;
   cx.save(); cx.translate(sx,sy+bob);
-  if(e.type==="bat") drawBat(e); else if(e.type==="wolf") drawWolf(e); else if(e.type==="tank") drawTank(e); else drawDemon(e);
+  if(e.type==="bat") drawBat(e); else if(e.type==="wolf") drawWolf(e); else if(e.type==="tank") drawTank(e); else if(e.type==="crate") drawCrate(e); else drawDemon(e);
   if(hitw){ cx.globalAlpha=0.75; cx.fillStyle="#fff"; cx.beginPath(); cx.ellipse(0,-e.r*0.3,e.r*0.95,e.r*1.05,0,0,TAU); cx.fill(); cx.globalAlpha=1; }
   cx.restore();
-  if(e.type==="boss"){ const w=e.r*1.7; cx.fillStyle="#000a"; cx.fillRect(sx-w/2,sy-e.r*2-6,w,6); cx.fillStyle="#ff4d6d"; cx.fillRect(sx-w/2,sy-e.r*2-6,w*Math.max(0,e.hp/e.maxhp),6); }
+  if(e.type==="boss"||e.type==="stageboss"){ const w=e.r*1.7; cx.fillStyle="#000a"; cx.fillRect(sx-w/2,sy-e.r*2-6,w,6); cx.fillStyle="#ff4d6d"; cx.fillRect(sx-w/2,sy-e.r*2-6,w*Math.max(0,e.hp/e.maxhp),6); }
 }
 // ----- 16도트 픽셀 몬스터 (좌표 0,0 = 발 위치) -----
 function drawBat(e){ const f=Math.sin(t*0.02+e.ph); // 날갯짓
@@ -946,6 +979,9 @@ function drawShots(){
     } else if(s.kind==="ring"&&s.t>0){ const [sx,sy]=w2s(s.x,s.y), rr=s.t/s.dur*s.maxr, p=s.t/s.dur;
       cx.globalAlpha=(1-p)*0.9; cx.strokeStyle="#ff9ee0"; cx.lineWidth=4; cx.beginPath(); cx.arc(sx,sy,rr,0,TAU); cx.stroke();
       cx.globalAlpha=(1-p)*0.5; cx.strokeStyle="#fff"; cx.lineWidth=1.5; cx.beginPath(); cx.arc(sx,sy,rr,0,TAU); cx.stroke(); cx.globalAlpha=1;
+    } else if(s.kind==="wave"){ const [sx,sy]=w2s(s.x,s.y); cx.save(); cx.translate(sx,sy); cx.rotate(s.ang);
+      cx.globalAlpha=clamp(s.life/180,0,0.85); cx.strokeStyle="#ff9ee0"; cx.lineWidth=3.5; cx.beginPath(); cx.arc(0,0,s.r,-1.1,1.1); cx.stroke();
+      cx.strokeStyle="#fff"; cx.lineWidth=1.6; cx.beginPath(); cx.arc(-3,0,s.r,-0.95,0.95); cx.stroke(); cx.globalAlpha=1; cx.restore();
     }
   }
 }
@@ -992,6 +1028,17 @@ function drawStar(x,y,r){ cx.beginPath(); for(let i=0;i<5;i++){ const a=i/5*TAU-
 function drawGems(){ for(const g of gems){ const [sx,sy]=w2s(g.x,g.y); if(sx<-10||sx>W+10||sy<-10||sy>H+10)continue;
   const s=g.v>=5?5:3, pulse=1+Math.sin(t*0.01+g.x)*0.15; cx.fillStyle=g.v>=8?"#ff7ad0":g.v>=5?"#7affc8":"#5fd0ff";
   cx.save(); cx.translate(sx,sy); cx.rotate(0.78); cx.fillRect(-s*pulse,-s*pulse,s*2*pulse,s*2*pulse); cx.restore(); } }
+function drawCrate(e){ // 나무상자
+  pxr(-14,-26,28,26,"#6b4a23"); pxr(-14,-26,28,4,"#82602f"); pxr(-14,-4,28,4,"#4f3518");
+  pxr(-14,-26,4,26,"#5a3d1c"); pxr(10,-26,4,26,"#5a3d1c");
+  cx.strokeStyle="#3f2c14"; cx.lineWidth=2; cx.beginPath(); cx.moveTo(-12,-24); cx.lineTo(12,-2); cx.moveTo(12,-24); cx.lineTo(-12,-2); cx.stroke();
+  pxr(-3,-16,6,6,"#caa46a");
+}
+function drawPickups(){ for(const pk of pickups){ const [sx,sy]=w2s(pk.x,pk.y); if(sx<-12||sx>W+12||sy<-12||sy>H+12)continue;
+  const bob=Math.sin(t*0.008+pk.x)*2; cx.save(); cx.translate(sx,sy+bob);
+  if(pk.kind==="heal"){ cx.fillStyle="#e8456b"; pxr(-4,-8,8,10,"#e8456b"); pxr(-3,-11,6,3,"#cfd6e2"); pxr(-2,-6,4,5,"#ff8aa6"); cx.fillStyle="#fff"; pxr(-1,-6,2,5,"#fff"); pxr(-2.5,-4.5,5,2,"#fff"); }
+  else { cx.fillStyle="#ffd24a"; cx.beginPath(); cx.arc(0,-4,6,0,TAU); cx.fill(); cx.fillStyle="#caa226"; cx.beginPath(); cx.arc(0,-4,6,0,TAU); cx.stroke?0:0; cx.fillStyle="#b8860b"; pxr(-2,-6,4,4,"#fff3b0"); }
+  cx.restore(); } }
 function drawChests(){ for(const ch of chests){ const [sx,sy]=w2s(ch.x,ch.y);
   const bob=Math.sin(t*0.006)*2, gl=0.5+Math.sin(t*0.01)*0.3;
   cx.save(); cx.translate(sx,sy+bob);
@@ -1115,7 +1162,7 @@ function drawPlayerSprite(px,py){
   const destH=player.morphed?56:50;
   // 그림자
   cx.fillStyle="rgba(0,0,0,.32)"; cx.beginPath(); cx.ellipse(px,py,destH*0.22,destH*0.085,0,0,TAU); cx.fill();
-  const col=player.moving?Math.floor(player.animT/150)%4:0;
+  const col=player.morphed?0:(player.moving?Math.floor(player.animT/150)%4:0); // 변신 시트는 동적 포즈라 정지 프레임 사용(깨짐 방지)
   const blink=player.invuln>0 && Math.floor(t/80)%2===0;
   if(!blitSheet(key, px, py+2, destH, col, player.dir, blink?0.4:1)){
     (player.morphed?C.drawMorph:C.draw)(px,py);   // 이미지 미로드 시 벡터 폴백
@@ -1133,7 +1180,7 @@ function render(){
     forEachVisibleObj(o=>{ const [sx,sy]=w2s(o.x,o.y); cx.fillStyle="rgba(0,0,0,.26)"; cx.beginPath(); cx.ellipse(sx,sy,objShadowR(o.t),objShadowR(o.t)*0.38,0,0,TAU); cx.fill(); });
     forEachVisibleObj(o=>{ if(o.y<=player.y){ const [sx,sy]=w2s(o.x,o.y); drawObj(o.t,sx,sy,o.h); } });
   }
-  drawGems(); drawChests(); drawShots();
+  drawGems(); drawPickups(); drawChests(); drawShots();
   for(const e of enemies) drawEnemy(e);
   drawOrbs(); drawFx();
   const [px,py]=w2s(player.x,player.y);
@@ -1157,23 +1204,23 @@ function render(){
 /* ============================================================
    END / FLOW
    ============================================================ */
-function awardGold(won){
-  const g = kills*2 + Math.floor(elapsed/1000) + (player.morphed?80:0) + (won?250:0);
+function awardGold(cleared){
+  const g = kills*2 + Math.floor(elapsed/1000) + (player.morphed?120:0) + (cleared?500:0);
   meta.gold += g; saveMeta(); return g;
 }
-function lose(){ state="over"; const g=awardGold(false);
+function lose(){ if(state==="over")return; state="over"; const g=awardGold(false);
   document.getElementById("overttl").textContent="전투 불능";
   document.getElementById("overmsg").innerHTML=CHARS[player.char].name+"은(는) 쓰러졌다…<br>전대는 다시 일어선다. 재도전하라.";
   showOver(g); }
-function win(){ state="over"; const g=awardGold(true);
-  document.getElementById("overttl").textContent="게이트 봉쇄 성공!";
-  document.getElementById("overmsg").innerHTML="5분의 사투 끝에 마물의 물결을 막아냈다.<br>"+CHARS[player.char].morphName+"의 활약으로 게이트는 닫혔다. ✨";
+function win(){ if(state==="over")return; won=true; state="over"; const g=awardGold(true);
+  document.getElementById("overttl").textContent="스테이지 클리어!";
+  document.getElementById("overmsg").innerHTML="20분의 사투 끝에 스테이지 보스를 처치했다.<br>"+CHARS[player.char].morphName+"의 활약으로 게이트는 닫혔다. ✨";
   showOver(g); }
 function showOver(goldEarned){
   document.getElementById("ov_time").textContent=fmtTime(elapsed);
   document.getElementById("ov_kill").textContent=kills; document.getElementById("ov_lv").textContent=player.level;
   document.getElementById("ov_gold").textContent="💰 +"+goldEarned+"  (보유 "+meta.gold+")";
-  document.getElementById("retrybtn").textContent=(elapsed>=SURVIVE_MS?"다시 플레이":"다시 도전");
+  document.getElementById("retrybtn").textContent=(won?"다시 플레이":"다시 도전");
   document.getElementById("hud").classList.add("hidden");
   document.getElementById("over").classList.remove("hidden");
 }
@@ -1262,8 +1309,8 @@ function onSheetLoad(){ if(state==="title") drawPortraits(); }
 ["gwangmin_basic","akane_basic","kimchired","samonpink","minmin_basic","goldbear"].forEach(n=>{
   const im=new Image(); im.onload=onSheetLoad; im.src="sprites/sheets/"+n+".png?v=6"; SHEETS[n.replace("_basic","")]=im;
 });
-["city","ruins","lava","snow","forest"].forEach(n=>{ const im=new Image(); im.src="sprites/bg/"+n+".jpg?v=3"; BG[n]=im; });
-document.getElementById("howbtn").onclick=()=>alert("◆ 이동: 화면 아무 곳이나 드래그 (PC: WASD/방향키)\n◆ 공격: 자동\n◆ 적을 처치해 보석을 모아 레벨업 → 무기·능력 3개 중 1개 선택\n◆ 캐릭터마다 기본 무기 + 전용 스킬 보유\n◆ 3분 생존 시 변신! 능력이 크게 강화된다\n◆ 5분 생존 시 게이트 봉쇄 성공\n◆ 골드로 강화 상점에서 영구 강화 가능");
+["ruins","lava","snow","forest"].forEach(n=>{ const im=new Image(); im.src="sprites/bg/"+n+".jpg?v=3"; BG[n]=im; });
+document.getElementById("howbtn").onclick=()=>alert("◆ 이동: 화면 아무 곳이나 드래그 (PC: WASD/방향키)\n◆ 공격: 자동\n◆ 적을 처치해 보석을 모아 레벨업 → 무기·능력 3개 중 1개 선택\n◆ 캐릭터마다 기본 무기 + 전용 스킬 보유\n◆ 5분 생존 시 변신! 능력이 크게 강화된다\n◆ 20분에 스테이지 보스 출현 — 처치하면 클리어\n◆ 나무상자를 부수면 회복/골드 획득\n◆ 골드로 강화 상점에서 영구 강화 가능");
 refreshGoldLabels();
 const pb=document.getElementById("pausebtn");
 pb.addEventListener("click",()=>{ if(state==="play"){state="paused";pb.textContent="▶";} else if(state==="paused"){state="play";pb.textContent="❚❚";lastTs=performance.now();} });
