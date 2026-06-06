@@ -58,6 +58,20 @@
     background:#0e1422cc; border:1px solid #2a3650; color:#cdd8ec; font-size:15px; display:flex; align-items:center; justify-content:center; }
   #joyhint{ position:absolute; left:0; bottom:14%; width:100%; text-align:center; color:#7f8ba3; font-size:12px; opacity:0; transition:opacity .4s; }
   .credit{ color:#52607a; font-size:11px; margin-top:14px; }
+  #titlegold{ font-size:16px; font-weight:800; color:var(--gold); margin-bottom:12px; }
+  /* shop rows */
+  .shoprow{ display:flex; align-items:center; gap:12px; text-align:left; width:100%;
+    background:linear-gradient(180deg,#172138,#0f1626); border:1px solid #32507e; border-radius:14px; padding:11px 14px; }
+  .shoprow .ic{ font-size:24px; width:44px; height:44px; flex:none; display:flex; align-items:center; justify-content:center; background:#0a1020; border-radius:11px; border:1px solid #2a3650; }
+  .shoprow .nm{ font-size:15px; font-weight:800; }
+  .shoprow .ds{ font-size:11px; color:#9fb0c8; margin-top:2px; }
+  .shoprow .pips{ margin-top:4px; letter-spacing:2px; font-size:10px; color:#4a6ea8; }
+  .shoprow .pips b{ color:var(--gold); }
+  .buybtn{ pointer-events:auto; cursor:pointer; flex:none; border:none; border-radius:10px; padding:9px 12px; font-size:13px; font-weight:800; color:#1a1206;
+    background:linear-gradient(180deg,#f0d089,#e0b14e); min-width:74px; text-align:center; }
+  .buybtn:active{ transform:translateY(1px); }
+  .buybtn.off{ background:#1d2640; color:#5d6b85; cursor:default; }
+  .buybtn.max{ background:#1d3a2a; color:#7fd0a0; cursor:default; }
 </style>
 </head>
 <body>
@@ -81,9 +95,20 @@
   <p class="sub">어느 날 현실에 <b style="color:#c79bff">게이트</b>가 열리고,<br>이세계의 <b style="color:#ff8a8a">마물</b>들이 쏟아져 나왔다.<br>
   같은 순간, 세계 각지에서 미지의 힘에 눈뜬 <b>5인</b>이 모여<br><b style="color:var(--gold)">전대</b>가 되어 맞선다.<br><br>
   3분을 버텨 <b style="color:#ff7ab0">변신</b>하고, 마물의 물결을 돌파하라!</p>
+  <div id="titlegold">💰 0</div>
   <button class="btn" id="startbtn">전대 소집</button>
+  <button class="btn sec" id="shopbtn">강화 상점</button>
   <button class="btn sec" id="howbtn">조작법</button>
-  <div class="credit">v3.0 — 전대 디펜스</div>
+  <div class="credit">v4.0 — 전대 디펜스</div>
+</div>
+
+<!-- shop (meta progression) -->
+<div id="shop" class="overlay hidden">
+  <h1 style="font-size:23px">강화 상점</h1>
+  <p class="sub">획득한 <b style="color:var(--gold)">골드</b>로 전대원을 영구 강화한다.<br>모든 캐릭터에 적용된다.</p>
+  <div id="shopgold" style="font-size:18px;font-weight:800;color:var(--gold);margin-bottom:12px">💰 0</div>
+  <div id="shoplist"></div>
+  <button class="btn sec" id="shopback">← 뒤로</button>
 </div>
 
 <!-- character select -->
@@ -107,6 +132,7 @@
   <div style="margin:6px 0 18px">
     <div class="stat">생존 시간 <span class="statbig" id="ov_time">0:00</span></div>
     <div class="stat">처치 <b id="ov_kill" style="color:#ff9a8a">0</b> · 레벨 <b id="ov_lv" style="color:var(--gold)">1</b></div>
+    <div class="stat" id="ov_gold" style="color:var(--gold);font-weight:800;margin-top:8px">💰 +0</div>
   </div>
   <button class="btn" id="retrybtn">다시 도전</button>
   <button class="btn sec" id="tohome">캐릭터 다시 선택</button>
@@ -191,6 +217,23 @@ const CHARS={
 };
 
 /* ============================================================
+   META PROGRESSION (영구 강화 · localStorage)
+   ============================================================ */
+const META_KEY="destiny_meta_v1";
+const SHOP=[
+  {k:"maxhp", name:"최대 체력",   icon:"❤️", per:"+15 / Lv",  max:8, cost:l=>40+l*30},
+  {k:"might", name:"공격력",     icon:"💢", per:"+6% / Lv",  max:8, cost:l=>50+l*35},
+  {k:"speed", name:"이동속도",   icon:"🥾", per:"+4% / Lv",  max:5, cost:l=>50+l*40},
+  {k:"magnet",name:"수집 범위",   icon:"🧲", per:"+15% / Lv", max:5, cost:l=>40+l*30},
+  {k:"growth",name:"경험치 획득", icon:"📈", per:"+6% / Lv",  max:5, cost:l=>60+l*45},
+  {k:"revive",name:"부활",       icon:"💖", per:"쓰러져도 부활(1회/Lv)", max:2, cost:l=>250+l*350},
+];
+function defaultMeta(){ return {gold:0, up:{maxhp:0,might:0,speed:0,magnet:0,growth:0,revive:0}}; }
+let meta=loadMeta();
+function loadMeta(){ try{ const m=JSON.parse(localStorage.getItem(META_KEY)); if(m&&m.up){ const d=defaultMeta(); return {gold:m.gold||0, up:Object.assign(d.up,m.up)}; } }catch(e){} return defaultMeta(); }
+function saveMeta(){ try{ localStorage.setItem(META_KEY,JSON.stringify(meta)); }catch(e){} }
+
+/* ============================================================
    STATE
    ============================================================ */
 let state="title", t=0, lastTs=0;
@@ -198,11 +241,18 @@ let player, cam, enemies, gems, shots, orbs, fx, dmgtexts;
 let elapsed=0, kills=0, spawnAcc=0, bossTimer=0;
 
 function newPlayer(charKey){
-  const C=CHARS[charKey];
+  const C=CHARS[charKey], u=meta.up;
   const p={ char:charKey, x:0,y:0,r:13,face:1, hp:100,maxhp:100, speed:2.6, regen:0,
     level:1, xp:0, xpNext:5, morphed:false,
     weapons:{}, wtimer:{}, passive:{},
-    stats:{might:1,area:1,haste:1,magnet:120,growth:1}, invuln:0, shield:null };
+    stats:{might:1,area:1,haste:1,magnet:120,growth:1}, invuln:1500, shield:null, revives:0 };
+  // 영구 강화 적용
+  p.maxhp = 100 + u.maxhp*15; p.hp = p.maxhp;
+  p.stats.might = 1 + u.might*0.06;
+  p.speed = 2.6*(1+u.speed*0.04);
+  p.stats.magnet = 120*(1+u.magnet*0.15);
+  p.stats.growth = 1 + u.growth*0.06;
+  p.revives = u.revive;
   p.weapons[C.base]=1; p.weapons[C.signature]=1;
   return p;
 }
@@ -211,7 +261,7 @@ function startGame(charKey){
   enemies=[]; gems=[]; shots=[]; orbs=[]; fx=[]; dmgtexts=[];
   elapsed=0; kills=0; spawnAcc=0; bossTimer=0;
   rebuildOrbs(); state="play";
-  ["title","select","over","levelup"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+  ["title","select","over","levelup","shop"].forEach(id=>document.getElementById(id).classList.add("hidden"));
   document.getElementById("hud").classList.remove("hidden");
   const jh=document.getElementById("joyhint"); jh.style.opacity=".9"; setTimeout(()=>jh.style.opacity="0",3500);
   refreshWepRow(); lastTs=performance.now();
@@ -221,30 +271,34 @@ function startGame(charKey){
    ENEMIES
    ============================================================ */
 const ETYPE={
-  bat:  {r:11,hp:14, spd:1.5, dmg:6, xp:1, col:"#7b4bd6", eye:"#ffe14d"},
-  wolf: {r:15,hp:34, spd:1.15,dmg:10,xp:2, col:"#9c3b3b", eye:"#ffd24a"},
-  tank: {r:23,hp:120,spd:0.7, dmg:16,xp:5, col:"#4a4a5e", eye:"#ff5a5a"},
-  boss: {r:42,hp:1400,spd:0.62,dmg:30,xp:60,col:"#2a1230", eye:"#ff3b6b"},
+  bat:  {r:11,hp:13, spd:1.5, dmg:5, xp:1, col:"#7b4bd6", eye:"#ffe14d"},
+  wolf: {r:15,hp:32, spd:1.15,dmg:9, xp:2, col:"#9c3b3b", eye:"#ffd24a"},
+  tank: {r:23,hp:115,spd:0.7, dmg:14,xp:5, col:"#4a4a5e", eye:"#ff5a5a"},
+  boss: {r:42,hp:1050,spd:0.62,dmg:26,xp:60,col:"#2a1230", eye:"#ff3b6b"},
 };
 function diff(){ return elapsed/60000; }
 function spawnEnemy(type){
   const b=ETYPE[type], d=diff();
-  const hpMul=1+d*0.55+(type==="boss"?d*0.4:0);
+  // 변신 전(0~3분)은 완만하게, 변신 후엔 가파르게
+  const hpMul=1 + d*0.40 + (player.morphed?(d-3)*0.45:0) + (type==="boss"?d*0.32:0);
   const ang=Math.random()*TAU, rad=Math.max(W,H)*0.62+40;
   enemies.push({type,x:player.x+Math.cos(ang)*rad,y:player.y+Math.sin(ang)*rad,
     r:b.r,hp:b.hp*hpMul,maxhp:b.hp*hpMul,spd:b.spd,dmg:b.dmg,xp:b.xp,col:b.col,eye:b.eye,hit:0,dmgCd:0,ph:Math.random()*TAU});
 }
 function updateSpawns(dt){
-  const d=diff(), rate=1.1+d*1.4;
+  const d=diff();
+  // 초반 완만 → 변신 후 물량 가속
+  let rate=0.8+d*0.95; if(player.morphed) rate*=1.35;
   spawnAcc+=dt/1000*rate;
-  while(spawnAcc>=1 && enemies.length<260){ spawnAcc-=1;
+  while(spawnAcc>=1 && enemies.length<280){ spawnAcc-=1;
     const roll=Math.random(); let type="bat";
-    if(d>1.2&&roll>0.78)type="wolf"; if(d>2.5&&roll>0.92)type="tank";
-    if(d>1.0&&roll>0.62&&type==="bat")type=Math.random()<0.5?"wolf":"bat";
+    if(d>1.3&&roll>0.80)type="wolf"; if(d>2.7&&roll>0.93)type="tank";
+    if(d>1.1&&roll>0.66&&type==="bat")type=Math.random()<0.5?"wolf":"bat";
     spawnEnemy(type);
   }
+  // 첫 보스는 변신 직후(약 3분), 이후 60초 간격
   bossTimer+=dt;
-  if(bossTimer>=60000){ bossTimer-=60000; spawnEnemy("boss"); flash("⚠ 게이트에서 거대 마물 출현!"); }
+  if(elapsed>=75000 && bossTimer>=60000){ bossTimer-=60000; spawnEnemy("boss"); flash("⚠ 게이트에서 거대 마물 출현!"); }
 }
 
 /* ============================================================
@@ -328,16 +382,55 @@ function killEnemy(e){ e.dead=true; kills++;
 }
 
 /* ============================================================
-   MORPH
+   MORPH — 변신 컷인 (게임 일시정지 + 연출)
    ============================================================ */
-function doMorph(){
+let morphT=0;
+const MORPH_CUT=2700, MORPH_FLASH=620;   // 컷인 길이 / 변신 섬광 타이밍
+function startMorph(){ state="morphing"; morphT=0; }
+function applyMorphStats(){
   player.morphed=true; player.r=15;
   player.maxhp+=60; player.hp=player.maxhp;
   player.stats.might*=1.6; player.stats.haste*=0.8; player.speed*=1.15;
-  player.invuln=1700;
-  fx.push({kind:"morphflash",x:player.x,y:player.y,t:0,dur:850});
-  fx.push({kind:"boom",x:player.x,y:player.y,r:170,t:0,dur:520});
-  flash("✦ "+CHARS[player.char].morphName+" 변신! ✦");
+  player.invuln=1900;
+  // 변신 직후 주변 정리
+  for(const e of enemies){ if(dist2(player.x,player.y,e.x,e.y)<220*220){ knock(e,player.x,player.y,40); } }
+  fx.push({kind:"boom",x:player.x,y:player.y,r:200,t:0,dur:560});
+}
+function updateMorph(dt){
+  t+=dt; morphT+=dt;
+  if(!player.morphed && morphT>=MORPH_FLASH) applyMorphStats();   // 섬광 순간에 변신 확정
+  if(morphT>=MORPH_CUT){ state="play"; lastTs=performance.now(); }
+}
+function renderMorphCutscene(){
+  const C=CHARS[player.char], col=C.swatch, p=morphT/MORPH_CUT;
+  cx.fillStyle="#05070c"; cx.fillRect(0,0,W,H);
+  // 회전 빛줄기
+  cx.save(); cx.translate(W/2,H/2); cx.rotate(t*0.0009);
+  for(let i=0;i<18;i++){ cx.rotate(TAU/18); cx.globalAlpha=0.10+0.05*Math.sin(t*0.01+i); cx.fillStyle=col;
+    cx.beginPath(); cx.moveTo(0,0); cx.lineTo(46,-1400); cx.lineTo(-46,-1400); cx.closePath(); cx.fill(); }
+  cx.restore(); cx.globalAlpha=1;
+  // 집중선(흰)
+  cx.save(); cx.translate(W/2,H/2); cx.rotate(-t*0.0006); cx.globalAlpha=0.06; cx.fillStyle="#fff";
+  for(let i=0;i<24;i++){ cx.rotate(TAU/24); cx.beginPath(); cx.moveTo(0,0); cx.lineTo(10,-1400); cx.lineTo(-10,-1400); cx.closePath(); cx.fill(); }
+  cx.restore(); cx.globalAlpha=1;
+  // 캐릭터 (섬광 전 기본형 → 후 변신형) 대형 포즈
+  const showMorph=player.morphed;
+  cx.save(); cx.translate(W/2, H/2+H*0.18);
+  const grow=showMorph?(1+Math.min((morphT-MORPH_FLASH)/400,1)*0.12):1;
+  const sc=Math.min(W,H)/64 * grow; cx.scale(sc,sc);
+  (showMorph?C.drawMorph:C.draw)(0,0);
+  cx.restore();
+  // 변신 섬광
+  if(morphT>=MORPH_FLASH-120 && morphT<=MORPH_FLASH+220){ cx.globalAlpha=1-Math.abs(morphT-MORPH_FLASH)/220; cx.fillStyle="#fff"; cx.fillRect(0,0,W,H); cx.globalAlpha=1; }
+  // 텍스트
+  cx.textAlign="center";
+  if(morphT<MORPH_FLASH){ const s=clamp(morphT/300,0,1); cx.globalAlpha=s; cx.fillStyle="#fff";
+    cx.font="900 "+(38+(1-s)*40)+"px system-ui"; cx.fillText("변 신!", W/2, H*0.2); cx.globalAlpha=1; }
+  else { const s=clamp((morphT-MORPH_FLASH)/240,0,1); cx.globalAlpha=s;
+    cx.save(); cx.translate(W/2,H*0.19); cx.scale(1+(1-s)*0.4,1+(1-s)*0.4);
+    cx.fillStyle=col; cx.font="900 46px system-ui"; cx.fillText(C.morphName, 0,0);
+    cx.fillStyle="#fff"; cx.font="800 15px system-ui"; cx.fillText(C.name+" · 각성", 0, 28); cx.restore(); cx.globalAlpha=1; }
+  cx.textAlign="left";
 }
 
 /* ============================================================
@@ -345,7 +438,7 @@ function doMorph(){
    ============================================================ */
 function update(dt){
   t+=dt; elapsed+=dt;
-  if(!player.morphed && elapsed>=MORPH_MS) doMorph();
+  if(!player.morphed && elapsed>=MORPH_MS){ startMorph(); return; }
   if(elapsed>=SURVIVE_MS){ win(); return; }
 
   const iv=inputVector();
@@ -409,7 +502,13 @@ function damagePlayer(d){
   if(player.shield && player.shield.hits>0 && t<player.shield.until){
     player.shield.hits--; player.invuln=220; fx.push({kind:"block",x:player.x,y:player.y,t:0,dur:300}); return; }
   player.hp-=d; player.invuln=180; fx.push({kind:"hurt",x:player.x,y:player.y,t:0,dur:200});
-  if(player.hp<=0){ player.hp=0; lose(); }
+  if(player.hp<=0){
+    if(player.revives>0){ player.revives--; player.hp=player.maxhp*0.5; player.invuln=2200;
+      for(const e of enemies){ if(dist2(player.x,player.y,e.x,e.y)<260*260) knock(e,player.x,player.y,60); }
+      fx.push({kind:"boom",x:player.x,y:player.y,r:200,t:0,dur:520}); fx.push({kind:"morphflash",x:player.x,y:player.y,t:0,dur:600});
+      flash("💖 부활!"); return; }
+    player.hp=0; lose();
+  }
 }
 function gainXP(v){ player.xp+=v*player.stats.growth;
   while(player.xp>=player.xpNext){ player.xp-=player.xpNext; player.level++; player.xpNext=Math.floor(player.xpNext*1.32+3); openLevelUp(); } }
@@ -552,7 +651,7 @@ function drawOrbs(){ const L=wlv("drone"); if(L<=0)return;
 function pbase(sx,sy){ const moving=inputVector().mag>0.12; const bob=moving?Math.abs(Math.sin(t*0.014))*1.6:Math.sin(t*0.005)*1.0;
   cx.fillStyle="rgba(0,0,0,.32)"; cx.beginPath(); cx.ellipse(sx,sy,TILE*0.27,TILE*0.1,0,0,TAU); cx.fill();
   cx.save(); cx.translate(sx,sy-bob); cx.scale(player.face,1); return bob; }
-function pflash(){ if(player.invuln>0&&Math.floor(t/60)%2===0){ cx.globalAlpha=0.35; cx.fillStyle="#fff"; cx.fillRect(-8,-32,16,32); cx.globalAlpha=1; } cx.restore(); }
+function pflash(){ if(state!=="morphing"&&player.invuln>0&&Math.floor(t/60)%2===0){ cx.globalAlpha=0.35; cx.fillStyle="#fff"; cx.fillRect(-8,-32,16,32); cx.globalAlpha=1; } cx.restore(); }
 
 function drawGwangmin(sx,sy){ pbase(sx,sy);
   cx.fillStyle="#23283a"; cx.beginPath(); cx.moveTo(-5,-25); cx.lineTo(-10,-22); cx.quadraticCurveTo(-13,-7,-6,-1); cx.lineTo(-2,-2); cx.lineTo(-3,-24); cx.closePath(); cx.fill();
@@ -653,6 +752,7 @@ function drawSalmonPink(sx,sy){ const bob=pbase(sx,sy); cx.scale(1.12,1.12);
 }
 
 function render(){
+  if(state==="morphing"){ renderMorphCutscene(); return; }
   cx.clearRect(0,0,W,H); drawGround(); drawGems(); drawShots();
   for(const e of enemies) drawEnemy(e);
   drawOrbs(); drawFx();
@@ -674,20 +774,50 @@ function render(){
 /* ============================================================
    END / FLOW
    ============================================================ */
-function lose(){ state="over";
+function awardGold(won){
+  const g = kills*2 + Math.floor(elapsed/1000) + (player.morphed?80:0) + (won?250:0);
+  meta.gold += g; saveMeta(); return g;
+}
+function lose(){ state="over"; const g=awardGold(false);
   document.getElementById("overttl").textContent="전투 불능";
   document.getElementById("overmsg").innerHTML=CHARS[player.char].name+"은(는) 쓰러졌다…<br>전대는 다시 일어선다. 재도전하라.";
-  showOver(); }
-function win(){ state="over";
+  showOver(g); }
+function win(){ state="over"; const g=awardGold(true);
   document.getElementById("overttl").textContent="게이트 봉쇄 성공!";
   document.getElementById("overmsg").innerHTML="5분의 사투 끝에 마물의 물결을 막아냈다.<br>"+CHARS[player.char].morphName+"의 활약으로 게이트는 닫혔다. ✨";
-  showOver(); }
-function showOver(){
+  showOver(g); }
+function showOver(goldEarned){
   document.getElementById("ov_time").textContent=fmtTime(elapsed);
   document.getElementById("ov_kill").textContent=kills; document.getElementById("ov_lv").textContent=player.level;
+  document.getElementById("ov_gold").textContent="💰 +"+goldEarned+"  (보유 "+meta.gold+")";
   document.getElementById("retrybtn").textContent=(elapsed>=SURVIVE_MS?"다시 플레이":"다시 도전");
   document.getElementById("hud").classList.add("hidden");
   document.getElementById("over").classList.remove("hidden");
+}
+
+/* ---------- 상점 (메타 강화) ---------- */
+function refreshGoldLabels(){ const g="💰 "+meta.gold;
+  document.getElementById("titlegold").textContent=g; document.getElementById("shopgold").textContent=g; }
+function openShop(){
+  document.getElementById("title").classList.add("hidden");
+  document.getElementById("over").classList.add("hidden");
+  document.getElementById("shop").classList.remove("hidden");
+  renderShop();
+}
+function renderShop(){
+  refreshGoldLabels();
+  const list=document.getElementById("shoplist"); list.innerHTML="";
+  for(const it of SHOP){ const lv=meta.up[it.k]||0, maxed=lv>=it.max, cost=maxed?0:it.cost(lv), afford=meta.gold>=cost;
+    let pips=""; for(let i=0;i<it.max;i++) pips+=(i<lv?"<b>◆</b>":"◇");
+    const el=document.createElement("div"); el.className="shoprow";
+    const btn = maxed?`<div class="buybtn max">MAX</div>`
+      :`<div class="buybtn ${afford?"":"off"}">💰 ${cost}</div>`;
+    el.innerHTML=`<div class="ic">${it.icon}</div>
+      <div style="flex:1"><div class="nm">${it.name} <small style="color:#7f8ba3">Lv ${lv}/${it.max}</small></div>
+      <div class="ds">${it.per}</div><div class="pips">${pips}</div></div>${btn}`;
+    if(!maxed && afford){ el.querySelector(".buybtn").onclick=()=>{ meta.gold-=cost; meta.up[it.k]=lv+1; saveMeta(); renderShop(); }; }
+    list.appendChild(el);
+  }
 }
 
 function showSelect(){
@@ -713,15 +843,20 @@ function showSelect(){
    ============================================================ */
 function loop(ts){ const dt=Math.min(40,ts-lastTs||16); lastTs=ts;
   if(state==="play") update(dt);
+  else if(state==="morphing"){ updateMorph(dt); render(); requestAnimationFrame(loop); return; }
   if(state==="play"||state==="levelup"||state==="over"||state==="paused") render();
   requestAnimationFrame(loop); }
 requestAnimationFrame(loop);
 
+function goHome(){ ["select","over","shop","levelup","hud"].forEach(id=>document.getElementById(id).classList.add("hidden")); document.getElementById("title").classList.remove("hidden"); state="title"; refreshGoldLabels(); }
 document.getElementById("startbtn").onclick=showSelect;
-document.getElementById("backbtn").onclick=()=>{ document.getElementById("select").classList.add("hidden"); document.getElementById("title").classList.remove("hidden"); };
+document.getElementById("backbtn").onclick=goHome;
+document.getElementById("shopbtn").onclick=openShop;
+document.getElementById("shopback").onclick=goHome;
 document.getElementById("retrybtn").onclick=()=>{ if(player) startGame(player.char); };
 document.getElementById("tohome").onclick=showSelect;
-document.getElementById("howbtn").onclick=()=>alert("◆ 이동: 화면 아무 곳이나 드래그 (PC: WASD/방향키)\n◆ 공격: 자동\n◆ 적을 처치해 보석을 모아 레벨업 → 무기·능력 3개 중 1개 선택\n◆ 캐릭터마다 기본 무기 + 전용 스킬 보유\n◆ 3분 생존 시 변신! 능력이 크게 강화된다\n◆ 5분 생존 시 게이트 봉쇄 성공");
+document.getElementById("howbtn").onclick=()=>alert("◆ 이동: 화면 아무 곳이나 드래그 (PC: WASD/방향키)\n◆ 공격: 자동\n◆ 적을 처치해 보석을 모아 레벨업 → 무기·능력 3개 중 1개 선택\n◆ 캐릭터마다 기본 무기 + 전용 스킬 보유\n◆ 3분 생존 시 변신! 능력이 크게 강화된다\n◆ 5분 생존 시 게이트 봉쇄 성공\n◆ 골드로 강화 상점에서 영구 강화 가능");
+refreshGoldLabels();
 const pb=document.getElementById("pausebtn");
 pb.addEventListener("click",()=>{ if(state==="play"){state="paused";pb.textContent="▶";} else if(state==="paused"){state="play";pb.textContent="❚❚";lastTs=performance.now();} });
 </script>
