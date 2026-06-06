@@ -119,6 +119,14 @@
   <button class="btn sec" id="backbtn">← 뒤로</button>
 </div>
 
+<!-- stage select -->
+<div id="stage" class="overlay hidden">
+  <h1 style="font-size:23px">전장 선택</h1>
+  <p class="sub">게이트가 열린 장소를 선택하라.</p>
+  <div id="stagelist"></div>
+  <button class="btn sec" id="stageback">← 캐릭터 다시</button>
+</div>
+
 <!-- levelup -->
 <div id="levelup" class="overlay hidden">
   <div id="lvtitle">⚔ 레벨 업! 보상을 선택하라</div>
@@ -220,9 +228,30 @@ const CHARS={
 // 4방향 스프라이트 시트 (4열=애니 프레임, 4행=정면/좌/우/후면)
 const SHEETS={};
 ["gwangmin_basic","akane_basic","kimchired","samonpink"].forEach(n=>{
-  const im=new Image(); im.src="sprites/sheets/"+n+".png?v=3"; SHEETS[n.replace("_basic","")]=im;
+  const im=new Image(); im.src="sprites/sheets/"+n+".png?v=4"; SHEETS[n.replace("_basic","")]=im;
 });
 const ROW_DOWN=0, ROW_LEFT=1, ROW_RIGHT=2, ROW_UP=3;
+// 스테이지(장소) — 절차적 배경 테마
+const STAGES={
+  city:{ id:"city", name:"도심 폐허", emoji:"🏙️", desc:"무너진 빌딩 사이로 마물이 쏟아진다.",
+    a:"#14171d", b:"#191d25", dot:"#2a3140", tint:"rgba(40,70,110,0.05)", prop:"rubble" },
+  rift:{ id:"rift", name:"게이트 균열지대", emoji:"🌀", desc:"공간이 갈라진 이세계의 틈.",
+    a:"#160f26", b:"#1d1533", dot:"#3a2a66", tint:"rgba(150,70,210,0.07)", prop:"crack" },
+  snow:{ id:"snow", name:"설원 전선", emoji:"❄️", desc:"눈보라가 몰아치는 동토의 게이트.",
+    a:"#1f262f", b:"#252d38", dot:"#46566a", tint:"rgba(170,205,255,0.06)", prop:"snow" },
+  lava:{ id:"lava", name:"용암 지대", emoji:"🌋", desc:"붉게 타오르는 화산의 균열.",
+    a:"#1a1210", b:"#221613", dot:"#3a2018", tint:"rgba(255,90,30,0.06)", prop:"lava" },
+};
+function hash2(x,y){ let h=(x|0)*374761393 + (y|0)*668265263; h=(h^(h>>>13))*1274126177; return (h>>>0); }
+function drawProp(type,x,y,h){
+  const s=4+(h%4);
+  if(type==="rubble"){ cx.fillStyle="#2c313c"; cx.fillRect(x,y,s+3,s); cx.fillStyle="#3a4252"; cx.fillRect(x,y,s+3,2); }
+  else if(type==="crack"){ cx.fillStyle="rgba(190,110,255,.18)"; cx.beginPath(); cx.arc(x,y,s+2,0,TAU); cx.fill();
+    cx.strokeStyle="rgba(200,120,255,.55)"; cx.lineWidth=1.6; cx.beginPath(); cx.moveTo(x-s,y-s*0.4); cx.lineTo(x,y); cx.lineTo(x-s*0.3,y+s); cx.stroke(); }
+  else if(type==="snow"){ cx.fillStyle="rgba(220,235,255,.5)"; cx.beginPath(); cx.ellipse(x,y,s,s*0.45,0,0,TAU); cx.fill(); }
+  else if(type==="lava"){ cx.fillStyle="rgba(255,110,40,.30)"; cx.beginPath(); cx.arc(x,y,s+2,0,TAU); cx.fill();
+    cx.fillStyle="rgba(255,205,90,.55)"; cx.beginPath(); cx.arc(x,y,s*0.5,0,TAU); cx.fill(); }
+}
 function blitSheet(key, sx, sy, destH, col, row, alpha){
   const img=SHEETS[key]; if(!img||!img.complete||!img.naturalWidth) return false;
   const cw=img.naturalWidth/4, ch=img.naturalHeight/4, dw=cw/ch*destH;
@@ -253,7 +282,7 @@ function saveMeta(){ try{ localStorage.setItem(META_KEY,JSON.stringify(meta)); }
    STATE
    ============================================================ */
 let state="title", t=0, lastTs=0;
-let player, cam, enemies, gems, shots, orbs, fx, dmgtexts;
+let player, cam, enemies, gems, shots, orbs, fx, dmgtexts, stage;
 let elapsed=0, kills=0, spawnAcc=0, bossTimer=0;
 
 function newPlayer(charKey){
@@ -272,15 +301,17 @@ function newPlayer(charKey){
   p.weapons[C.base]=1; p.weapons[C.signature]=1;
   return p;
 }
-function startGame(charKey){
+let lastStageKey="city";
+function startGame(charKey, stageKey){
+  stage = STAGES[stageKey||lastStageKey] || STAGES.city; lastStageKey=stage.id;
   player=newPlayer(charKey); cam={x:0,y:0};
   enemies=[]; gems=[]; shots=[]; orbs=[]; fx=[]; dmgtexts=[];
   elapsed=0; kills=0; spawnAcc=0; bossTimer=0;
   rebuildOrbs(); state="play";
-  ["title","select","over","levelup","shop"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+  ["title","select","stage","over","levelup","shop"].forEach(id=>document.getElementById(id).classList.add("hidden"));
   document.getElementById("hud").classList.remove("hidden");
   const jh=document.getElementById("joyhint"); jh.style.opacity=".9"; setTimeout(()=>jh.style.opacity="0",3500);
-  refreshWepRow(); lastTs=performance.now();
+  refreshWepRow(); lastTs=performance.now(); flash("📍 "+stage.name);
 }
 
 /* ============================================================
@@ -608,12 +639,15 @@ function flash(msg){ flashMsg=msg; flashT=2200; }
    ============================================================ */
 function w2s(x,y){ return [x-cam.x+W/2, y-cam.y+H/2]; }
 function drawGround(){
+  const st=stage||STAGES.city;
   const cs=TILE*2, ox=((-cam.x+W/2)%cs+cs)%cs, oy=((-cam.y+H/2)%cs+cs)%cs;
   for(let gx=-cs;gx<W+cs;gx+=cs)for(let gy=-cs;gy<H+cs;gy+=cs){
     const wx=Math.round((gx+cam.x-W/2)/cs),wy=Math.round((gy+cam.y-H/2)/cs);
-    cx.fillStyle=((wx+wy)&1)===0?"#101626":"#0c1120"; cx.fillRect(gx+ox-cs,gy+oy-cs,cs+1,cs+1);
+    cx.fillStyle=((wx+wy)&1)===0?st.a:st.b; cx.fillRect(gx+ox-cs,gy+oy-cs,cs+1,cs+1);
+    const h=hash2(wx,wy);
+    if(h%5===0){ const pxp=gx+ox-cs + 7+(h%29)/29*(cs-14), pyp=gy+oy-cs + 7+((h>>5)%29)/29*(cs-14); drawProp(st.prop,pxp,pyp,h); }
   }
-  cx.fillStyle="#1a2236"; for(let gx=-cs;gx<W+cs;gx+=cs)for(let gy=-cs;gy<H+cs;gy+=cs) cx.fillRect(gx+ox-cs,gy+oy-cs,2,2);
+  cx.fillStyle=st.dot; for(let gx=-cs;gx<W+cs;gx+=cs)for(let gy=-cs;gy<H+cs;gy+=cs) cx.fillRect(gx+ox-cs,gy+oy-cs,2,2);
 }
 function drawEnemy(e){
   const [sx,sy]=w2s(e.x,e.y); if(sx<-60||sx>W+60||sy<-60||sy>H+60)return;
@@ -780,9 +814,9 @@ function drawPlayerSprite(px,py){
   const destH=player.morphed?56:50;
   // 그림자
   cx.fillStyle="rgba(0,0,0,.32)"; cx.beginPath(); cx.ellipse(px,py,destH*0.22,destH*0.085,0,0,TAU); cx.fill();
-  const col=player.moving?Math.floor(player.animT/130)%4:0;
+  const col=player.moving?Math.floor(player.animT/150)%4:0;
   const blink=player.invuln>0 && Math.floor(t/80)%2===0;
-  if(!blitSheet(key, px, py+6, destH, col, player.dir, blink?0.4:1)){
+  if(!blitSheet(key, px, py+2, destH, col, player.dir, blink?0.4:1)){
     (player.morphed?C.drawMorph:C.draw)(px,py);   // 이미지 미로드 시 벡터 폴백
   }
 }
@@ -800,6 +834,7 @@ function render(){
     cx.fillStyle="#fff"; for(let i=0;i<player.shield.hits;i++){ const a=t*0.004+i/player.shield.hits*TAU; drawStar(px+Math.cos(a)*(player.r+12),py-12+Math.sin(a)*(player.r+12),2.6); }
     cx.restore();
   }
+  if(stage&&stage.tint){ cx.fillStyle=stage.tint; cx.fillRect(0,0,W,H); }   // 분위기 틴트
   if(flashMsg&&flashT>0){ flashT-=16; cx.globalAlpha=clamp(flashT/600,0,1); cx.fillStyle="#ffd86a"; cx.font="800 20px system-ui"; cx.textAlign="center"; cx.fillText(flashMsg,W/2,H*0.28); cx.globalAlpha=1; cx.textAlign="left"; }
   cx.font="800 13px system-ui"; cx.textAlign="center";
   for(const d of dmgtexts){ const [dx,dy]=w2s(d.x,d.y); cx.globalAlpha=clamp(1-d.t/560,0,1); cx.fillStyle="#fff"; cx.fillText(d.txt,dx,dy); }
@@ -867,10 +902,25 @@ function showSelect(){
       <div class="tags"><span class="tag">${WEAPONS[C.base].icon} ${WEAPONS[C.base].name}</span>
       <span class="tag">${WEAPONS[C.signature].icon} ${WEAPONS[C.signature].name}</span>
       <span class="tag" style="color:${C.swatch}">⚡ ${C.morphName}</span></div></div>`;
-      el.onclick=()=>startGame(k); }
+      el.onclick=()=>showStageSelect(k); }
     list.appendChild(el);
   }
   document.getElementById("select").classList.remove("hidden");
+}
+
+let pendingChar=null;
+function showStageSelect(charKey){
+  pendingChar=charKey; state="title";
+  document.getElementById("select").classList.add("hidden");
+  document.getElementById("over").classList.add("hidden");
+  const list=document.getElementById("stagelist"); list.innerHTML="";
+  for(const k in STAGES){ const S=STAGES[k]; const el=document.createElement("div"); el.className="card";
+    el.innerHTML=`<div class="ic" style="border-color:${S.dot}">${S.emoji}</div>
+      <div><div class="nm">${S.name}</div><div class="ds">${S.desc}</div></div>`;
+    el.onclick=()=>startGame(pendingChar,k);
+    list.appendChild(el);
+  }
+  document.getElementById("stage").classList.remove("hidden");
 }
 
 /* ============================================================
@@ -883,12 +933,13 @@ function loop(ts){ const dt=Math.min(40,ts-lastTs||16); lastTs=ts;
   requestAnimationFrame(loop); }
 requestAnimationFrame(loop);
 
-function goHome(){ ["select","over","shop","levelup","hud"].forEach(id=>document.getElementById(id).classList.add("hidden")); document.getElementById("title").classList.remove("hidden"); state="title"; refreshGoldLabels(); }
+function goHome(){ ["select","stage","over","shop","levelup","hud"].forEach(id=>document.getElementById(id).classList.add("hidden")); document.getElementById("title").classList.remove("hidden"); state="title"; refreshGoldLabels(); }
 document.getElementById("startbtn").onclick=showSelect;
 document.getElementById("backbtn").onclick=goHome;
+document.getElementById("stageback").onclick=()=>{ document.getElementById("stage").classList.add("hidden"); showSelect(); };
 document.getElementById("shopbtn").onclick=openShop;
 document.getElementById("shopback").onclick=goHome;
-document.getElementById("retrybtn").onclick=()=>{ if(player) startGame(player.char); };
+document.getElementById("retrybtn").onclick=()=>{ if(player) startGame(player.char, stage?stage.id:lastStageKey); };
 document.getElementById("tohome").onclick=showSelect;
 document.getElementById("howbtn").onclick=()=>alert("◆ 이동: 화면 아무 곳이나 드래그 (PC: WASD/방향키)\n◆ 공격: 자동\n◆ 적을 처치해 보석을 모아 레벨업 → 무기·능력 3개 중 1개 선택\n◆ 캐릭터마다 기본 무기 + 전용 스킬 보유\n◆ 3분 생존 시 변신! 능력이 크게 강화된다\n◆ 5분 생존 시 게이트 봉쇄 성공\n◆ 골드로 강화 상점에서 영구 강화 가능");
 refreshGoldLabels();
