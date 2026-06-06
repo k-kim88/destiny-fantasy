@@ -264,17 +264,66 @@ const STAGES={
     pal:["#2a211d","#241b18","#322620","#1e1714","#2c221c"], dec:"lava", tint:"rgba(18,4,0,0.10)", s:53 },
 };
 function makeTile(st){
-  const SZ=384, D=8, n=SZ/D; const c=document.createElement("canvas"); c.width=c.height=SZ; const g=c.getContext("2d");
+  const SZ=384, D=4, n=SZ/D; const c=document.createElement("canvas"); c.width=c.height=SZ; const g=c.getContext("2d");
   for(let y=0;y<n;y++)for(let x=0;x<n;x++){ const h=hash2(x+st.s*5,y+st.s*9); g.fillStyle=st.pal[h%st.pal.length]; g.fillRect(x*D,y*D,D,D); }
   st._tile=c; return c;
 }
 function pxr(x,y,w,h,c){ cx.fillStyle=c; cx.fillRect(x|0,y|0,w,h); }
 function drawDecal(st,x,y,h){
-  if(st.dec==="city"){ pxr(x,y,8,8,"#4a505a"); pxr(x+2,y+2,4,4,"#565d68"); if(h&1){pxr(x-7,y+5,9,2,"#23282f"); pxr(x+5,y-4,2,7,"#23282f");} }
-  else if(st.dec==="forest"){ pxr(x,y,2,6,"#3c5e2a"); pxr(x+3,y-2,2,8,"#4a6c30"); pxr(x-3,y+1,2,6,"#34521f");
-    if(h%3===0) pxr(x+1,y-6,3,3,"#c0405a"); else if(h%3===1) pxr(x+1,y-5,3,3,"#d8c24a"); }
-  else if(st.dec==="snow"){ pxr(x,y,6,2,"#eef4fc"); pxr(x+1,y-2,2,2,"#ffffff"); if(h&1){pxr(x-5,y+3,10,1,"#9fb0ca");} }
-  else if(st.dec==="lava"){ pxr(x-6,y,12,2,"#ff5a14"); pxr(x,y-5,2,10,"#ff7a2e"); pxr(x,y,2,2,"#ffd24a"); pxr(x-6,y,2,2,"#c83a0e"); }
+  if(st.dec==="city"){ pxr(x,y,5,5,"#4a505a"); pxr(x+1,y+1,3,3,"#565d68"); if(h&1){pxr(x-6,y+4,8,1,"#23282f"); pxr(x+4,y-3,1,6,"#23282f");}
+    if(h%5===0){ pxr(x-1,y+8,12,2,"#c9c39a"); } } // 차선 점선
+  else if(st.dec==="forest"){ pxr(x,y,1,5,"#3c5e2a"); pxr(x+2,y-1,1,6,"#4a6c30"); pxr(x-2,y+1,1,5,"#34521f");
+    if(h%3===0) pxr(x+1,y-5,2,2,"#c0405a"); else if(h%3===1) pxr(x+1,y-4,2,2,"#d8c24a"); }
+  else if(st.dec==="snow"){ pxr(x,y,4,1,"#eef4fc"); pxr(x+1,y-1,1,1,"#ffffff"); if(h&1){pxr(x-4,y+2,9,1,"#9fb0ca");} }
+  else if(st.dec==="lava"){ pxr(x-5,y,10,1,"#ff5a14"); pxr(x,y-4,1,9,"#ff7a2e"); pxr(x,y,1,1,"#ffd24a"); pxr(x-5,y,1,1,"#c83a0e"); }
+}
+/* ----- 맵 오브젝트(벽/장식) ----- */
+const GRIDO=132;
+const OBJS={
+  city:[{t:"building",solid:24,w:2},{t:"car",solid:15,w:2},{t:"barrel",solid:8,w:2},{t:"manhole",solid:0,w:3}],
+  forest:[{t:"tree",solid:12,w:3},{t:"boulder",solid:16,w:1},{t:"log",solid:11,w:1},{t:"bush",solid:0,w:3},{t:"stone",solid:0,w:3}],
+  snow:[{t:"pine",solid:12,w:2},{t:"icerock",solid:15,w:1},{t:"deadtree",solid:9,w:1},{t:"mound",solid:0,w:3}],
+  lava:[{t:"spire",solid:14,w:2},{t:"obsidian",solid:13,w:1},{t:"lavapool",solid:0,w:3},{t:"rock",solid:0,w:3}],
+};
+function objAt(st,cwx,cwy){
+  const h=hash2(cwx*3+st.s, cwy*5+st.s+99);
+  if(h%100>=34) return null;                       // ~34% 밀도
+  const pool=OBJS[st.id]||OBJS.city, tw=pool.reduce((a,o)=>a+o.w,0);
+  let r=(h>>>3)%tw, pick=pool[0]; for(const o of pool){ if(r<o.w){pick=o;break;} r-=o.w; }
+  const jx=((h>>>5)%50)-25, jy=((h>>>11)%50)-25;
+  return {t:pick.t, solid:pick.solid, x:cwx*GRIDO+GRIDO/2+jx, y:cwy*GRIDO+GRIDO/2+jy, h};
+}
+function forEachVisibleObj(cb){
+  const st=stage; if(!st)return; const G=GRIDO;
+  const c0x=Math.floor((cam.x-W/2)/G)-1, c1x=Math.floor((cam.x+W/2)/G)+1;
+  const c0y=Math.floor((cam.y-H/2)/G)-1, c1y=Math.floor((cam.y+H/2)/G)+1;
+  for(let cy=c0y;cy<=c1y;cy++)for(let cx2=c0x;cx2<=c1x;cx2++){ const o=objAt(st,cx2,cy); if(o)cb(o); }
+}
+function objShadowR(t){ return t==="building"?20:t==="boulder"||t==="icerock"?15:t==="manhole"||t==="lavapool"?13:t==="car"?16:11; }
+function drawObj(t,x,y,h){
+  switch(t){
+    case "building":{ const w=40,hh=58; pxr(x-w/2,y-hh,w,hh,"#2b303a"); pxr(x-w/2,y-hh,w,5,"#3a4150"); pxr(x-w/2,y-hh+5,w,2,"#20242c");
+      for(let yy=y-hh+11; yy<y-12; yy+=11)for(let xx=x-w/2+5;xx<x+w/2-5;xx+=9){ pxr(xx,yy,5,7,(hash2(xx,yy)&3)?"#525f6e":"#e0c25a"); }
+      pxr(x-6,y-13,12,13,"#161a20"); pxr(x-6,y-13,12,2,"#2a2f38"); break; }
+    case "car":{ pxr(x-14,y-11,28,11,"#7a3636"); pxr(x-10,y-18,20,8,"#8a4444"); pxr(x-8,y-16,7,5,"#aee0ff"); pxr(x+2,y-16,7,5,"#aee0ff");
+      pxr(x-12,y-2,5,4,"#15171c"); pxr(x+7,y-2,5,4,"#15171c"); pxr(x-14,y-7,28,2,"#5a2828"); break; }
+    case "barrel":{ pxr(x-6,y-16,12,16,"#46632e"); pxr(x-6,y-13,12,2,"#2f4420"); pxr(x-6,y-5,12,2,"#2f4420"); pxr(x-6,y-16,12,2,"#5a7a3a"); break; }
+    case "manhole":{ cx.fillStyle="#2b2f36"; cx.beginPath(); cx.ellipse(x,y,9,5,0,0,TAU); cx.fill(); cx.strokeStyle="#3c424b"; cx.lineWidth=1; cx.beginPath(); cx.ellipse(x,y,6,3,0,0,TAU); cx.stroke(); break; }
+    case "tree":{ pxr(x-3,y-16,6,16,"#5a3f24"); pxr(x-2,y-16,2,16,"#6e4f30");
+      cx.fillStyle="#26451c"; cx.beginPath(); cx.arc(x,y-26,14,0,TAU); cx.fill(); cx.fillStyle="#315a26"; cx.beginPath(); cx.arc(x-5,y-30,9,0,TAU); cx.arc(x+6,y-27,8,0,TAU); cx.fill(); break; }
+    case "boulder":{ cx.fillStyle="#4b4f57"; cx.beginPath(); cx.arc(x,y-9,15,0,TAU); cx.fill(); cx.fillStyle="#5b606a"; cx.beginPath(); cx.arc(x-4,y-13,8,0,TAU); cx.fill(); pxr(x-12,y-3,24,3,"#3a3e45"); break; }
+    case "log":{ pxr(x-16,y-9,32,10,"#5a3f24"); pxr(x-16,y-9,32,3,"#6e4f30"); cx.fillStyle="#7a5836"; cx.beginPath(); cx.arc(x-16,y-4,5,0,TAU); cx.fill(); cx.fillStyle="#caa46a"; cx.beginPath(); cx.arc(x-16,y-4,2.5,0,TAU); cx.fill(); break; }
+    case "bush":{ cx.fillStyle="#2c4a20"; cx.beginPath(); cx.arc(x-5,y-4,6,0,TAU); cx.arc(x+5,y-4,6,0,TAU); cx.arc(x,y-8,7,0,TAU); cx.fill(); break; }
+    case "stone":{ cx.fillStyle="#565b63"; cx.beginPath(); cx.arc(x,y-4,6,0,TAU); cx.fill(); pxr(x-5,y-2,10,2,"#43474e"); break; }
+    case "pine":{ pxr(x-2,y-10,4,10,"#5a3f24"); cx.fillStyle="#2a5238"; for(let i=0;i<3;i++){ const w=14-i*4, yy=y-12-i*9; cx.beginPath(); cx.moveTo(x-w,yy); cx.lineTo(x+w,yy); cx.lineTo(x,yy-12); cx.fill(); } pxr(x-9,y-22,18,2,"#dfeaf6"); pxr(x-6,y-31,12,2,"#dfeaf6"); break; }
+    case "icerock":{ cx.fillStyle="#8fb6d8"; cx.beginPath(); cx.arc(x,y-9,14,0,TAU); cx.fill(); cx.fillStyle="#bcdcef"; cx.beginPath(); cx.arc(x-4,y-13,7,0,TAU); cx.fill(); pxr(x-12,y-3,24,3,"#6f93b4"); break; }
+    case "deadtree":{ pxr(x-2,y-22,4,22,"#4a4036"); pxr(x-2,y-16,10,2,"#4a4036"); pxr(x+6,y-18,2,6,"#4a4036"); pxr(x-10,y-12,8,2,"#4a4036"); break; }
+    case "mound":{ cx.fillStyle="#dde8f4"; cx.beginPath(); cx.ellipse(x,y-3,11,6,0,0,TAU); cx.fill(); cx.fillStyle="#fff"; cx.beginPath(); cx.ellipse(x-2,y-5,5,3,0,0,TAU); cx.fill(); break; }
+    case "spire":{ cx.fillStyle="#241a16"; cx.beginPath(); cx.moveTo(x-10,y); cx.lineTo(x+10,y); cx.lineTo(x+3,y-30); cx.lineTo(x-3,y-30); cx.fill(); pxr(x-8,y-4,16,3,"#ff6a1e"); pxr(x-2,y-14,3,12,"#ff7a2e"); break; }
+    case "obsidian":{ cx.fillStyle="#1c1820"; cx.beginPath(); cx.moveTo(x-12,y); cx.lineTo(x-6,y-18); cx.lineTo(x+4,y-14); cx.lineTo(x+12,y); cx.fill(); pxr(x-3,y-12,2,10,"#5a3a6a"); break; }
+    case "lavapool":{ cx.fillStyle="rgba(255,90,20,.5)"; cx.beginPath(); cx.ellipse(x,y,14,8,0,0,TAU); cx.fill(); cx.fillStyle="rgba(255,180,60,.7)"; cx.beginPath(); cx.ellipse(x,y,8,4,0,0,TAU); cx.fill(); break; }
+    case "rock":{ cx.fillStyle="#3a322c"; cx.beginPath(); cx.arc(x,y-4,6,0,TAU); cx.fill(); pxr(x-5,y-2,10,2,"#2a241f"); break; }
+  }
 }
 function blitSheet(key, sx, sy, destH, col, row, alpha){
   const img=SHEETS[key]; if(!img||!img.complete||!img.naturalWidth) return false;
@@ -308,6 +357,8 @@ function saveMeta(){ try{ localStorage.setItem(META_KEY,JSON.stringify(meta)); }
 let state="title", t=0, lastTs=0;
 let player, cam, enemies, gems, shots, orbs, fx, dmgtexts, stage, chests;
 let elapsed=0, kills=0, spawnAcc=0, bossTimer=0;
+let shakeT=0, shakeMag=0;
+function addShake(m,d){ shakeMag=Math.max(shakeMag,m); shakeT=Math.max(shakeT,d); }
 
 function newPlayer(charKey){
   const C=CHARS[charKey], u=meta.up;
@@ -430,6 +481,7 @@ function tickWeapons(dt){
     const L=wlv("slam"); T.slam=(2600-L*150)*cdMul();
     const maxr=(85+L*16)*area(), dmg=(26+L*11)*might();
     fx.push({kind:"shatter",x:player.x,y:player.y,r:maxr,t:0,dur:500,seed:hash2((t|0)+7,L)});
+    addShake(8, 280);
     for(const e of enemies){ if(dist2(player.x,player.y,e.x,e.y)<maxr*maxr){ hurtEnemy(e,dmg); knock(e,player.x,player.y,16);} }
   }
   // 에너지 블레이드 (공용)
@@ -537,6 +589,12 @@ function update(dt){
     else player.dir=iv.y<0?ROW_UP:ROW_DOWN;
     player.moving=true; player.animT+=dt;
   } else player.moving=false;
+  // 솔리드 오브젝트(벽) 충돌 — 플레이어 밀어내기
+  if(stage){ const G=GRIDO, cwx=Math.round((player.x-G/2)/G), cwy=Math.round((player.y-G/2)/G);
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){ const o=objAt(stage,cwx+dx,cwy+dy);
+      if(o&&o.solid){ const ddx=player.x-o.x, ddy=player.y-o.y, d=Math.hypot(ddx,ddy), mn=o.solid+player.r-3;
+        if(d<mn){ if(d>0.01){ const k=(mn-d)/d; player.x+=ddx*k; player.y+=ddy*k; } else { player.x+=mn; } } } } }
+  if(shakeT>0) shakeT-=dt;
   cam.x+=(player.x-cam.x)*0.12; cam.y+=(player.y-cam.y)*0.12;
   if(player.regen) player.hp=Math.min(player.maxhp,player.hp+player.regen*dt/1000);
   if(player.invuln>0) player.invuln-=dt;
@@ -959,11 +1017,20 @@ function drawPlayerSprite(px,py){
 }
 function render(){
   if(state==="morphing"){ renderMorphCutscene(); return; }
-  cx.clearRect(0,0,W,H); drawGround(); drawGems(); drawChests(); drawShots();
+  cx.clearRect(0,0,W,H);
+  // 스크린 셰이크
+  let shaken=false;
+  if(shakeT>0){ const amp=shakeMag*Math.min(1,shakeT/160); cx.save(); cx.translate(rand(-amp,amp),rand(-amp,amp)); shaken=true; }
+  drawGround();
+  // 오브젝트 그림자(전체) → 뒤쪽 오브젝트(플레이어보다 위)
+  forEachVisibleObj(o=>{ const [sx,sy]=w2s(o.x,o.y); cx.fillStyle="rgba(0,0,0,.26)"; cx.beginPath(); cx.ellipse(sx,sy,objShadowR(o.t),objShadowR(o.t)*0.38,0,0,TAU); cx.fill(); });
+  forEachVisibleObj(o=>{ if(o.y<=player.y){ const [sx,sy]=w2s(o.x,o.y); drawObj(o.t,sx,sy,o.h); } });
+  drawGems(); drawChests(); drawShots();
   for(const e of enemies) drawEnemy(e);
   drawOrbs(); drawFx();
   const [px,py]=w2s(player.x,player.y);
   drawPlayerSprite(px,py);
+  forEachVisibleObj(o=>{ if(o.y>player.y){ const [sx,sy]=w2s(o.x,o.y); drawObj(o.t,sx,sy,o.h); } });  // 앞쪽 오브젝트
   // 반짝임 보호막
   if(player.shield && player.shield.hits>0 && t<player.shield.until){
     cx.save(); cx.globalAlpha=0.5+Math.sin(t*0.02)*0.2; cx.strokeStyle="#ffd0ee"; cx.lineWidth=2.5;
@@ -976,6 +1043,7 @@ function render(){
   cx.font="800 13px system-ui"; cx.textAlign="center";
   for(const d of dmgtexts){ const [dx,dy]=w2s(d.x,d.y); cx.globalAlpha=clamp(1-d.t/560,0,1); cx.fillStyle="#fff"; cx.fillText(d.txt,dx,dy); }
   cx.globalAlpha=1; cx.textAlign="left";
+  if(shaken) cx.restore();
 }
 
 /* ============================================================
