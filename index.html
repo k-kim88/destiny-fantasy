@@ -252,17 +252,48 @@ const CHARS={
 const SHEETS={};
 const ROW_DOWN=0, ROW_LEFT=1, ROW_RIGHT=2, ROW_UP=3;
 function hash2(x,y){ let h=(x|0)*374761393 + (y|0)*668265263; h=(h^(h>>>13))*1274126177; return (h>>>0); }
-// 스테이지(장소) — 16도트 픽셀 절차 배경 (바닥 평면 위주)
-const STAGES={
-  city:{ id:"city", name:"도심 폐허", emoji:"🏙️", desc:"무너진 도시. 갈라진 아스팔트.",
-    pal:["#3a3f47","#33383f","#2c3138","#42474f","#363b43"], dec:"city", tint:"rgba(10,12,22,0.10)", s:11 },
-  forest:{ id:"forest", name:"마경의 숲", emoji:"🌲", desc:"마력이 깃든 어둠의 풀밭.",
-    pal:["#27331f","#223016","#2c3a22","#1e2a16","#243318"], dec:"forest", tint:"rgba(6,16,10,0.10)", s:23 },
-  snow:{ id:"snow", name:"설원 전선", emoji:"❄️", desc:"눈 덮인 동토.",
-    pal:["#c9d6e6","#bccadd","#d4e0ee","#b2c1d6","#c2cfe1"], dec:"snow", tint:"rgba(20,28,46,0.06)", s:37 },
-  lava:{ id:"lava", name:"용암 지대", emoji:"🌋", desc:"식은 용암 위 균열.",
-    pal:["#2a211d","#241b18","#322620","#1e1714","#2c221c"], dec:"lava", tint:"rgba(18,4,0,0.10)", s:53 },
+const STAGE_COLL={
+  city:{gx:64,gy:36,dw:1024,dh:576,bits:"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAB8AAAAAAAAAFwAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAGAAAAAYAAAAeAAAABAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
+  lava:{gx:64,gy:36,dw:1024,dh:576,bits:"AAAAAAAAAAAAAAAAAAAD/gAAAAAAAAf+AAAAAAAAD/4AAAAAAAAD/gB+AAAAAAH+AP8AAAAIAf4B/8AAABwAfgP/8AAAMAAeAf/wAAAgAAAAP8AAAGAAAAAPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAADAAAAAAAAAA4AAAAAAAAADAAAAAAAAAAeAAAAAAAAAH8AAAAAAAAAeYAAAAAAAABwAAAAAAAAACAAAAAAABwAIAAAAAAA/hhxgAAAAAH/GGH4AAAAAf+wc/wAAAAB//B+AAAAAAH/gDwAAAAAAf8AGAAAAAAA1AAcAAAAAAAAAAAAAAAAAAAA"},
+  snow:{gx:64,gy:36,dw:1024,dh:576,bits:"AAAAAAAAAAB/8BwABgAIfn/4CAAGOAz+f/wMwAd8Dfx//g/gA74A/H8/DfADGAH+eAPAwAIAA/hwAOCAAAAf8HAAcAAAAA/4cADgAAAADgAYAMAAAAAEAAAAwAABAAAAAAAAAAEAAAAAAAAAAYAAACgAAAAAAAAAPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAADgAAEAAIADgEAAAQAAwH8AAAADAADAf4AAAAAAAYD/wAAAAAGDB3/gAAAAAMemP3AAAAAA/+dyOIAAAAH/4+EdwAAAH/PhAYjgAAAfwYABgDAAAD8BAAGAGAAA7gMAAAAAAADHBwIAAAAAAAYEBwAAAAAADgAAAAAAAAAAAA"},
+  forest:{gx:64,gy:36,dw:1024,dh:576,bits:"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAGAAAAAAAAABgAAAAAAAAAMAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
 };
+// 스테이지(장소) — 배경 이미지 + 이미지에서 추출한 충돌 마스크 (없으면 16도트 절차 폴백)
+const STAGES={
+  city:{ id:"city", name:"도심 폐허", emoji:"🏙️", desc:"무너진 도시. 갈라진 아스팔트.", img:"city", coll:STAGE_COLL.city, tint:"rgba(8,10,18,0.22)",
+    pal:["#3a3f47","#33383f","#2c3138","#42474f","#363b43"], dec:"city", s:11 },
+  forest:{ id:"forest", name:"마경의 숲", emoji:"🌲", desc:"마력이 깃든 어둠의 숲.", img:"forest", coll:STAGE_COLL.forest, tint:"rgba(6,14,9,0.22)",
+    pal:["#27331f","#223016","#2c3a22","#1e2a16","#243318"], dec:"forest", s:23 },
+  snow:{ id:"snow", name:"설원 전선", emoji:"❄️", desc:"눈 덮인 동토.", img:"snow", coll:STAGE_COLL.snow, tint:"rgba(20,28,46,0.14)",
+    pal:["#c9d6e6","#bccadd","#d4e0ee","#b2c1d6","#c2cfe1"], dec:"snow", s:37 },
+  lava:{ id:"lava", name:"용암 지대", emoji:"🌋", desc:"붉게 타오르는 화산.", img:"lava", coll:STAGE_COLL.lava, tint:"rgba(18,4,0,0.18)",
+    pal:["#2a211d","#241b18","#322620","#1e1714","#2c221c"], dec:"lava", s:53 },
+};
+const BG={};
+function imgReady(st){ const im=st&&BG[st.img]; return im&&im.complete&&im.naturalWidth>0; }
+function ensureColl(st){ if(st._coll||!st.coll)return; const C=st.coll, raw=atob(C.bits), n=C.gx*C.gy, mask=new Uint8Array(n);
+  for(let k=0;k<n;k++){ mask[k]=(raw.charCodeAt(k>>3)>>(7-(k&7)))&1; }
+  st._coll={gx:C.gx,gy:C.gy,dw:C.dw,dh:C.dh,cw:C.dw/C.gx,ch:C.dh/C.gy,mask}; }
+function collideMask(ent){ const st=stage; if(!st)return; ensureColl(st); const C=st._coll; if(!C)return;
+  const cw=C.cw, ch=C.ch, r=ent.r;
+  const cx0=Math.floor((ent.x-r)/cw), cx1=Math.floor((ent.x+r)/cw), cy0=Math.floor((ent.y-r)/ch), cy1=Math.floor((ent.y+r)/ch);
+  for(let cyi=cy0;cyi<=cy1;cyi++)for(let cxi=cx0;cxi<=cx1;cxi++){
+    const ix=((cxi%C.gx)+C.gx)%C.gx, iy=((cyi%C.gy)+C.gy)%C.gy;
+    if(C.mask[iy*C.gx+ix]!==1) continue;
+    const bx=cxi*cw, by=cyi*ch, hw=cw/2, hh=ch/2, ox=bx+hw, oy=by+hh;
+    const nx=clamp(ent.x,bx,bx+cw), ny=clamp(ent.y,by,by+ch); let dx=ent.x-nx, dy=ent.y-ny, d2=dx*dx+dy*dy;
+    if(d2<r*r){ if(d2>0.0001){ const d=Math.sqrt(d2),k=(r-d)/d; ent.x+=dx*k; ent.y+=dy*k; }
+      else { const px=hw-Math.abs(ent.x-ox),py=hh-Math.abs(ent.y-oy); if(px<py)ent.x+=(ent.x>=ox?1:-1)*(px+r); else ent.y+=(ent.y>=oy?1:-1)*(py+r); } }
+  }
+}
+function spawnPoint(st){ if(!st||!st.coll) return {x:0,y:0}; ensureColl(st); const C=st._coll;
+  const ccx=C.gx>>1, ccy=C.gy>>1, R=Math.max(C.gx,C.gy);
+  for(let r=0;r<R;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+    const ix=ccx+dx, iy=ccy+dy; if(ix<0||iy<0||ix>=C.gx||iy>=C.gy)continue;
+    if(!C.mask[iy*C.gx+ix]) return {x:ix*C.cw+C.cw/2, y:iy*C.ch+C.ch/2};
+  }
+  return {x:0,y:0};
+}
 function makeTile(st){
   const SZ=384, D=4, n=SZ/D; const c=document.createElement("canvas"); c.width=c.height=SZ; const g=c.getContext("2d");
   for(let y=0;y<n;y++)for(let x=0;x<n;x++){ const h=hash2(x+st.s*5,y+st.s*9); g.fillStyle=st.pal[h%st.pal.length]; g.fillRect(x*D,y*D,D,D); }
@@ -401,7 +432,8 @@ function newPlayer(charKey){
 let lastStageKey="city";
 function startGame(charKey, stageKey){
   stage = STAGES[stageKey||lastStageKey] || STAGES.city; lastStageKey=stage.id;
-  player=newPlayer(charKey); cam={x:0,y:0};
+  player=newPlayer(charKey);
+  const sp=spawnPoint(stage); player.x=sp.x; player.y=sp.y; cam={x:sp.x,y:sp.y};
   enemies=[]; gems=[]; shots=[]; orbs=[]; fx=[]; dmgtexts=[]; chests=[];
   elapsed=0; kills=0; spawnAcc=0; bossTimer=0;
   rebuildOrbs(); state="play";
@@ -612,7 +644,7 @@ function update(dt){
     player.moving=true; player.animT+=dt;
   } else player.moving=false;
   // 솔리드 오브젝트(벽) — 매 프레임 화면 주변 솔리드 수집 후 플레이어 밀어내기
-  rebuildSolids(); for(const o of solids) collideBox(player,o);
+  if(imgReady(stage)){ collideMask(player); } else { rebuildSolids(); for(const o of solids) collideBox(player,o); }
   if(shakeT>0) shakeT-=dt;
   cam.x+=(player.x-cam.x)*0.12; cam.y+=(player.y-cam.y)*0.12;
   if(player.regen) player.hp=Math.min(player.maxhp,player.hp+player.regen*dt/1000);
@@ -623,7 +655,7 @@ function update(dt){
   for(const e of enemies){
     const a=Math.atan2(player.y-e.y,player.x-e.x), wob=Math.sin(t*0.005+e.ph)*0.25;
     e.x+=Math.cos(a+wob)*e.spd*(dt/16.6); e.y+=Math.sin(a+wob)*e.spd*(dt/16.6);
-    if(e.type!=="boss"){ for(const o of solids) collideBox(e,o); }   // 마물도 벽에 막힘(보스는 통과)
+    if(e.type!=="boss"){ if(imgReady(stage)) collideMask(e); else for(const o of solids) collideBox(e,o); }   // 마물도 벽에 막힘(보스는 통과)
     e.dmgCd-=dt;
     if(dist2(player.x,player.y,e.x,e.y)<(e.r+player.r)**2 && e.dmgCd<=0 && player.invuln<=0){ e.dmgCd=600; damagePlayer(e.dmg); }
   }
@@ -823,12 +855,17 @@ function flash(msg){ flashMsg=msg; flashT=2200; }
    ============================================================ */
 function w2s(x,y){ return [x-cam.x+W/2, y-cam.y+H/2]; }
 function drawGround(){
-  const st=stage||STAGES.city; const tile=st._tile||makeTile(st), T=tile.width;
-  cx.imageSmoothingEnabled=false;
+  const st=stage||STAGES.city;
+  if(imgReady(st)){ const img=BG[st.img], iw=img.naturalWidth, ih=img.naturalHeight;
+    let ox=(W/2-cam.x)%iw; if(ox>0)ox-=iw; let oy=(H/2-cam.y)%ih; if(oy>0)oy-=ih;
+    for(let x=ox;x<W+iw;x+=iw)for(let y=oy;y<H+ih;y+=ih) cx.drawImage(img,Math.floor(x),Math.floor(y));
+    return;
+  }
+  // 폴백: 16도트 절차 배경
+  const tile=st._tile||makeTile(st), T=tile.width; cx.imageSmoothingEnabled=false;
   let ox=(W/2-cam.x)%T; if(ox>0)ox-=T; let oy=(H/2-cam.y)%T; if(oy>0)oy-=T;
   for(let x=ox;x<W+T;x+=T)for(let y=oy;y<H+T;y+=T) cx.drawImage(tile,Math.floor(x),Math.floor(y));
   cx.imageSmoothingEnabled=true;
-  // 바닥 데칼(평면) — 월드 해시 배치라 반복 안 됨
   const G=46, ox2=((-cam.x+W/2)%G+G)%G, oy2=((-cam.y+H/2)%G+G)%G;
   for(let gx=-G;gx<W+G;gx+=G)for(let gy=-G;gy<H+G;gy+=G){
     const wx=Math.round((gx+cam.x-W/2)/G), wy=Math.round((gy+cam.y-H/2)/G), h=hash2(wx+st.s,wy-st.s);
@@ -1088,15 +1125,17 @@ function render(){
   let shaken=false;
   if(shakeT>0){ const amp=shakeMag*Math.min(1,shakeT/160); cx.save(); cx.translate(rand(-amp,amp),rand(-amp,amp)); shaken=true; }
   drawGround();
-  // 오브젝트 그림자(전체) → 뒤쪽 오브젝트(플레이어보다 위)
-  forEachVisibleObj(o=>{ const [sx,sy]=w2s(o.x,o.y); cx.fillStyle="rgba(0,0,0,.26)"; cx.beginPath(); cx.ellipse(sx,sy,objShadowR(o.t),objShadowR(o.t)*0.38,0,0,TAU); cx.fill(); });
-  forEachVisibleObj(o=>{ if(o.y<=player.y){ const [sx,sy]=w2s(o.x,o.y); drawObj(o.t,sx,sy,o.h); } });
+  const useImg=imgReady(stage);
+  if(!useImg){ // 절차 폴백일 때만 절차 오브젝트(깊이 정렬)
+    forEachVisibleObj(o=>{ const [sx,sy]=w2s(o.x,o.y); cx.fillStyle="rgba(0,0,0,.26)"; cx.beginPath(); cx.ellipse(sx,sy,objShadowR(o.t),objShadowR(o.t)*0.38,0,0,TAU); cx.fill(); });
+    forEachVisibleObj(o=>{ if(o.y<=player.y){ const [sx,sy]=w2s(o.x,o.y); drawObj(o.t,sx,sy,o.h); } });
+  }
   drawGems(); drawChests(); drawShots();
   for(const e of enemies) drawEnemy(e);
   drawOrbs(); drawFx();
   const [px,py]=w2s(player.x,player.y);
   drawPlayerSprite(px,py);
-  forEachVisibleObj(o=>{ if(o.y>player.y){ const [sx,sy]=w2s(o.x,o.y); drawObj(o.t,sx,sy,o.h); } });  // 앞쪽 오브젝트
+  if(!useImg) forEachVisibleObj(o=>{ if(o.y>player.y){ const [sx,sy]=w2s(o.x,o.y); drawObj(o.t,sx,sy,o.h); } });
   // 반짝임 보호막
   if(player.shield && player.shield.hits>0 && t<player.shield.until){
     cx.save(); cx.globalAlpha=0.5+Math.sin(t*0.02)*0.2; cx.strokeStyle="#ffd0ee"; cx.lineWidth=2.5;
@@ -1187,15 +1226,12 @@ function showStageSelect(charKey){
   document.getElementById("over").classList.add("hidden");
   const list=document.getElementById("stagelist"); list.innerHTML="";
   for(const k in STAGES){ const S=STAGES[k]; const el=document.createElement("div"); el.className="card";
-    el.innerHTML=`<canvas class="stagethumb" id="st_${k}" width="50" height="50"></canvas>
+    el.innerHTML=`<img class="stagethumb" src="sprites/bg/${S.img}.jpg?v=2" alt="">
       <div><div class="nm">${S.emoji} ${S.name}</div><div class="ds">${S.desc}</div></div>`;
     el.onclick=()=>startGame(pendingChar,k);
     list.appendChild(el);
   }
   document.getElementById("stage").classList.remove("hidden");
-  for(const k in STAGES){ const S=STAGES[k], cvp=document.getElementById("st_"+k); if(!cvp)continue;
-    const g=cvp.getContext("2d"), tile=S._tile||makeTile(S); g.imageSmoothingEnabled=false;
-    g.drawImage(tile,0,0,tile.width,tile.width,0,0,50,50); }
 }
 
 /* ============================================================
@@ -1223,6 +1259,7 @@ function onSheetLoad(){ if(state==="title") drawPortraits(); }
 ["gwangmin_basic","akane_basic","kimchired","samonpink","minmin_basic","goldbear"].forEach(n=>{
   const im=new Image(); im.onload=onSheetLoad; im.src="sprites/sheets/"+n+".png?v=6"; SHEETS[n.replace("_basic","")]=im;
 });
+["city","lava","snow","forest"].forEach(n=>{ const im=new Image(); im.src="sprites/bg/"+n+".jpg?v=2"; BG[n]=im; });
 document.getElementById("howbtn").onclick=()=>alert("◆ 이동: 화면 아무 곳이나 드래그 (PC: WASD/방향키)\n◆ 공격: 자동\n◆ 적을 처치해 보석을 모아 레벨업 → 무기·능력 3개 중 1개 선택\n◆ 캐릭터마다 기본 무기 + 전용 스킬 보유\n◆ 3분 생존 시 변신! 능력이 크게 강화된다\n◆ 5분 생존 시 게이트 봉쇄 성공\n◆ 골드로 강화 상점에서 영구 강화 가능");
 refreshGoldLabels();
 const pb=document.getElementById("pausebtn");
