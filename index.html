@@ -206,15 +206,31 @@ const CHARS={
   gwangmin:{ key:"gwangmin", name:"광민", role:"한국 군인", emoji:"🪖",
     desc:"소총으로 무장한 베테랑 병사. 수류탄으로 적진을 쓸어버린다.",
     base:"rifle", signature:"grenade", morphName:"김치레드", swatch:"#c0392b",
+    sheet:"gwangmin", morphSheet:"kimchired",
     draw:(x,y)=>drawGwangmin(x,y), drawMorph:(x,y)=>drawKimchiRed(x,y) },
   akane:{ key:"akane", name:"아카네", role:"일본 아이돌", emoji:"🎤",
     desc:"음파 마이크로 노래하며 싸운다. 반짝임으로 자신을 지킨다.",
     base:"sonic", signature:"sparkle", morphName:"사몬핑크", swatch:"#ff7ab0",
+    sheet:"akane", morphSheet:"samonpink",
     draw:(x,y)=>drawAkane(x,y), drawMorph:(x,y)=>drawSalmonPink(x,y) },
   c3:{ key:"c3", name:"???", role:"COMING SOON", emoji:"❔", locked:true },
   c4:{ key:"c4", name:"???", role:"COMING SOON", emoji:"❔", locked:true },
   c5:{ key:"c5", name:"???", role:"COMING SOON", emoji:"❔", locked:true },
 };
+// 4방향 스프라이트 시트 (4열=애니 프레임, 4행=정면/좌/우/후면)
+const SHEETS={};
+["gwangmin_basic","akane_basic","kimchired","samonpink"].forEach(n=>{
+  const im=new Image(); im.src="sprites/sheets/"+n+".png"; SHEETS[n.replace("_basic","")]=im;
+});
+const ROW_DOWN=0, ROW_LEFT=1, ROW_RIGHT=2, ROW_UP=3;
+function blitSheet(key, sx, sy, destH, col, row, alpha){
+  const img=SHEETS[key]; if(!img||!img.complete||!img.naturalWidth) return false;
+  const cw=img.naturalWidth/4, ch=img.naturalHeight/4, dw=cw/ch*destH;
+  if(alpha!=null){ cx.save(); cx.globalAlpha=alpha; }
+  cx.drawImage(img, col*cw, row*ch, cw, ch, sx-dw/2, sy-destH, dw, destH);
+  if(alpha!=null) cx.restore();
+  return true;
+}
 
 /* ============================================================
    META PROGRESSION (영구 강화 · localStorage)
@@ -242,7 +258,7 @@ let elapsed=0, kills=0, spawnAcc=0, bossTimer=0;
 
 function newPlayer(charKey){
   const C=CHARS[charKey], u=meta.up;
-  const p={ char:charKey, x:0,y:0,r:13,face:1, hp:100,maxhp:100, speed:2.6, regen:0,
+  const p={ char:charKey, x:0,y:0,r:13,face:1, dir:ROW_DOWN, animT:0, moving:false, hp:100,maxhp:100, speed:2.6, regen:0,
     level:1, xp:0, xpNext:5, morphed:false,
     weapons:{}, wtimer:{}, passive:{},
     stats:{might:1,area:1,haste:1,magnet:120,growth:1}, invuln:1500, shield:null, revives:0 };
@@ -415,11 +431,13 @@ function renderMorphCutscene(){
   cx.restore(); cx.globalAlpha=1;
   // 캐릭터 (섬광 전 기본형 → 후 변신형) 대형 포즈
   const showMorph=player.morphed;
-  cx.save(); cx.translate(W/2, H/2+H*0.18);
+  const key=showMorph?C.morphSheet:C.sheet;
   const grow=showMorph?(1+Math.min((morphT-MORPH_FLASH)/400,1)*0.12):1;
-  const sc=Math.min(W,H)/64 * grow; cx.scale(sc,sc);
-  (showMorph?C.drawMorph:C.draw)(0,0);
-  cx.restore();
+  const bigH=Math.min(W,H)*0.46*grow;
+  const baseY=H/2+bigH*0.42;
+  if(!blitSheet(key, W/2, baseY, bigH, 0, ROW_DOWN)){
+    cx.save(); cx.translate(W/2, baseY); const sc=bigH/40; cx.scale(sc,sc); (showMorph?C.drawMorph:C.draw)(0,0); cx.restore();
+  }
   // 변신 섬광
   if(morphT>=MORPH_FLASH-120 && morphT<=MORPH_FLASH+220){ cx.globalAlpha=1-Math.abs(morphT-MORPH_FLASH)/220; cx.fillStyle="#fff"; cx.fillRect(0,0,W,H); cx.globalAlpha=1; }
   // 텍스트
@@ -442,7 +460,13 @@ function update(dt){
   if(elapsed>=SURVIVE_MS){ win(); return; }
 
   const iv=inputVector();
-  if(iv.mag>0.05){ player.x+=iv.x*player.speed*(dt/16.6); player.y+=iv.y*player.speed*(dt/16.6); if(Math.abs(iv.x)>0.02)player.face=iv.x<0?-1:1; }
+  if(iv.mag>0.05){ player.x+=iv.x*player.speed*(dt/16.6); player.y+=iv.y*player.speed*(dt/16.6);
+    if(Math.abs(iv.x)>0.02)player.face=iv.x<0?-1:1;
+    // 스프라이트 방향(우세 축)
+    if(Math.abs(iv.x)>Math.abs(iv.y)) player.dir=iv.x<0?ROW_LEFT:ROW_RIGHT;
+    else player.dir=iv.y<0?ROW_UP:ROW_DOWN;
+    player.moving=true; player.animT+=dt;
+  } else player.moving=false;
   cam.x+=(player.x-cam.x)*0.12; cam.y+=(player.y-cam.y)*0.12;
   if(player.regen) player.hp=Math.min(player.maxhp,player.hp+player.regen*dt/1000);
   if(player.invuln>0) player.invuln-=dt;
@@ -751,13 +775,24 @@ function drawSalmonPink(sx,sy){ const bob=pbase(sx,sy); cx.scale(1.12,1.12);
   pflash();
 }
 
+function drawPlayerSprite(px,py){
+  const C=CHARS[player.char], key=player.morphed?C.morphSheet:C.sheet;
+  const destH=player.morphed?56:50;
+  // 그림자
+  cx.fillStyle="rgba(0,0,0,.32)"; cx.beginPath(); cx.ellipse(px,py,destH*0.22,destH*0.085,0,0,TAU); cx.fill();
+  const col=player.moving?Math.floor(player.animT/130)%4:0;
+  const blink=player.invuln>0 && Math.floor(t/80)%2===0;
+  if(!blitSheet(key, px, py+6, destH, col, player.dir, blink?0.4:1)){
+    (player.morphed?C.drawMorph:C.draw)(px,py);   // 이미지 미로드 시 벡터 폴백
+  }
+}
 function render(){
   if(state==="morphing"){ renderMorphCutscene(); return; }
   cx.clearRect(0,0,W,H); drawGround(); drawGems(); drawShots();
   for(const e of enemies) drawEnemy(e);
   drawOrbs(); drawFx();
   const [px,py]=w2s(player.x,player.y);
-  const C=CHARS[player.char]; (player.morphed?C.drawMorph:C.draw)(px,py);
+  drawPlayerSprite(px,py);
   // 반짝임 보호막
   if(player.shield && player.shield.hits>0 && t<player.shield.until){
     cx.save(); cx.globalAlpha=0.5+Math.sin(t*0.02)*0.2; cx.strokeStyle="#ffd0ee"; cx.lineWidth=2.5;
