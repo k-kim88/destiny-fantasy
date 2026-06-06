@@ -59,6 +59,16 @@
   #joyhint{ position:absolute; left:0; bottom:14%; width:100%; text-align:center; color:#7f8ba3; font-size:12px; opacity:0; transition:opacity .4s; }
   .credit{ color:#52607a; font-size:11px; margin-top:14px; }
   #titlegold{ font-size:16px; font-weight:800; color:var(--gold); margin-bottom:12px; }
+  /* 슈퍼전대풍 로고 */
+  #heroimg{ width:min(92%,440px); border-radius:14px; box-shadow:0 8px 30px #000a; margin:6px 0 4px; border:1px solid #2a3650; }
+  .logowrap{ text-align:center; line-height:1; margin-bottom:6px; }
+  .logosub{ display:inline-block; background:linear-gradient(180deg,#e0492f,#9a1d12); color:#fff; font-weight:900; font-size:14px;
+    letter-spacing:.16em; padding:3px 12px; border-radius:6px; transform:skewX(-8deg); border:2px solid #2a0c08; box-shadow:0 2px 0 #5a0f08,0 3px 8px #0008; }
+  .logomain{ font-size:46px; font-weight:900; letter-spacing:.03em; transform:skewX(-7deg); margin-top:8px; line-height:.95;
+    background:linear-gradient(180deg,#ffffff 6%,#ffe27a 36%,#f5a623 62%,#b8410f 100%); -webkit-background-clip:text; background-clip:text; color:transparent;
+    -webkit-text-stroke:2px #2a0c08; text-shadow:0 3px 0 #7a1208; filter:drop-shadow(0 5px 8px #000a); }
+  @media (max-width:380px){ .logomain{ font-size:38px; } }
+  .charphoto{ width:78px; height:64px; object-fit:cover; object-position:center 28%; border-radius:10px; border:1px solid #2a3650; flex:none; }
   /* shop rows */
   .shoprow{ display:flex; align-items:center; gap:12px; text-align:left; width:100%;
     background:linear-gradient(180deg,#172138,#0f1626); border:1px solid #32507e; border-radius:14px; padding:11px 14px; }
@@ -103,14 +113,13 @@
     <button class="btn sec" id="langbtn" style="padding:7px 12px;font-size:13px;margin:0">日本語</button>
     <button class="btn sec" id="mutebtn" style="padding:7px 12px;font-size:13px;margin:0">🔊</button>
   </div>
-  <h1>데스티니 전대</h1>
-  <div id="tagline" style="color:#e6c074;font-weight:700;letter-spacing:.28em;font-size:12px;margin-bottom:6px">게이트 인베이전</div>
-  <p class="sub" id="titlestory"></p>
+  <div class="logowrap"><div class="logosub" id="logosub">타베모노 센타이</div><div class="logomain" id="logomain">우마인쟈</div></div>
+  <img id="heroimg" src="sprites/art/heroes.jpg?v=1" alt="">
   <div id="titlegold">💰 0</div>
   <button class="btn" id="startbtn">전대 소집</button>
   <button class="btn sec" id="shopbtn">강화 상점</button>
   <button class="btn sec" id="howbtn">조작법</button>
-  <div class="credit" id="creditline">v5.0 — 전대 디펜스</div>
+  <div class="credit" id="creditline">v6.0 — 타베모노 센타이</div>
 </div>
 
 <!-- shop (meta progression) -->
@@ -242,12 +251,12 @@ const CHARS={
     draw:(x,y)=>drawGwangmin(x,y), drawMorph:(x,y)=>drawKimchiRed(x,y) },
   akane:{ key:"akane", name:"아카네", ja:"アカネ", role:"일본 아이돌", roleja:"日本アイドル", emoji:"🎤",
     desc:"음파 마이크로 노래하며 싸운다. 반짝임으로 자신을 지킨다.", descja:"音波マイクで歌い戦う。きらめきで身を守る。",
-    base:"sonic", signature:"sparkle", morphName:"사몬핑크", morphja:"サーモンピンク", swatch:"#ff7ab0",
+    base:"sonic", signature:"sparkle", morphName:"소세지 핑크", morphja:"ソーセージピンク", swatch:"#ff7ab0",
     sheet:"akane", morphSheet:"samonpink",
     draw:(x,y)=>drawAkane(x,y), drawMorph:(x,y)=>drawSalmonPink(x,y) },
   minmin:{ key:"minmin", name:"민민", ja:"ミンミン", role:"각성한 야수", roleja:"覚醒した野獣", emoji:"🐻",
     desc:"베어너클로 할퀴고 대지를 강타하는 곰 전사.", descja:"ベアナックルで引き裂き、大地を打ち砕く熊戦士。",
-    base:"fist", signature:"slam", morphName:"골드베어", morphja:"ゴールドベア", swatch:"#d9a23a",
+    base:"fist", signature:"slam", morphName:"야키니꾸 브라운", morphja:"焼肉ブラウン", swatch:"#d9a23a",
     sheet:"minmin", morphSheet:"goldbear",
     draw:(x,y)=>drawGwangmin(x,y), drawMorph:(x,y)=>drawGwangmin(x,y) },
   c4:{ key:"c4", name:"???", ja:"???", role:"COMING SOON", roleja:"COMING SOON", emoji:"❔", locked:true },
@@ -264,7 +273,7 @@ function chRole(c){ return (lang==="ja"&&c.roleja)?c.roleja:c.role; }
 function chDesc(c){ return (lang==="ja"&&c.descja)?c.descja:c.desc; }
 function chMorph(c){ return (lang==="ja"&&c.morphja)?c.morphja:c.morphName; }
 const UI={
- ko:{tagline:"게이트 인베이전",start:"전대 소집",shop:"강화 상점",how:"조작법",credit:"v5.0 — 전대 디펜스",
+ ko:{logosub:"타베모노 센타이",logomain:"우마인쟈",start:"전대 소집",shop:"강화 상점",how:"조작법",credit:"v6.0 — 타베모노 센타이",
    selT:"전사 선택",selS:"함께 싸울 전대원을 선택하라.<br>5분 생존 시 각성하여 변신한다.",
    stT:"전장 선택",stS:"게이트가 열린 장소를 선택하라.",back:"← 뒤로",stback:"← 캐릭터 다시",
    lvT:"⚔ 레벨 업! 보상을 선택하라",rlT:"🎰 보스 격파! 전리품 룰렛",get:"획득",
@@ -272,7 +281,7 @@ const UI={
    home:"캐릭터 다시 선택",retry:"다시 도전",retryW:"다시 플레이",
    story:`어느 날 현실에 <b style="color:#c79bff">게이트</b>가 열리고,<br>이세계의 <b style="color:#ff8a8a">마물</b>이 쏟아져 나왔다.<br>미지의 힘에 눈뜬 <b>전대</b>가 맞선다.<br><br>5분을 버텨 <b style="color:#ff7ab0">변신</b>, 20분의 보스를 처치하라!`,
    howtext:"◆ 이동: 화면 드래그 (PC: WASD/방향키)\n◆ 공격: 자동\n◆ 적 처치→보석→레벨업(3택)\n◆ 무기는 Lv10에서 진화\n◆ 5분 변신 / 20분 스테이지 보스 처치=클리어\n◆ 나무상자: 회복/골드"},
- ja:{tagline:"ゲート・インベイジョン",start:"戦隊招集",shop:"強化ショップ",how:"操作方法",credit:"v5.0 — 戦隊ディフェンス",
+ ja:{logosub:"食べ物戦隊",logomain:"ウマインジャー",start:"戦隊招集",shop:"強化ショップ",how:"操作方法",credit:"v6.0 — 食べ物戦隊",
    selT:"戦士選択",selS:"共に戦う戦隊員を選べ。<br>5分生存で覚醒し変身する。",
    stT:"戦場選択",stS:"ゲートが開いた場所を選べ。",back:"← 戻る",stback:"← キャラ選択",
    lvT:"⚔ レベルアップ！報酬を選べ",rlT:"🎰 ボス撃破！戦利品ルーレット",get:"獲得",
@@ -285,7 +294,7 @@ function T(k){ return (UI[lang]&&UI[lang][k])||UI.ko[k]||k; }
 function setTxt(id,s){ const e=document.getElementById(id); if(e)e.textContent=s; }
 function setHTML(id,s){ const e=document.getElementById(id); if(e)e.innerHTML=s; }
 function applyLang(){
-  setTxt("tagline",T("tagline")); setHTML("titlestory",T("story"));
+  setTxt("logosub",T("logosub")); setTxt("logomain",T("logomain"));
   setTxt("startbtn",T("start")); setTxt("shopbtn",T("shop")); setTxt("howbtn",T("how")); setTxt("creditline",T("credit"));
   setTxt("selT",T("selT")); setHTML("selS",T("selS")); setTxt("stT",T("stT")); setHTML("stS",T("stS"));
   setTxt("backbtn",T("back")); setTxt("stageback",T("stback")); setTxt("shopback",T("back"));
@@ -352,7 +361,7 @@ const STAGES={
   lava:{ id:"lava", name:"용암 지대", ja:"溶岩地帯", emoji:"🌋", desc:"붉게 타오르는 화산.", descja:"赤く燃える火山地帯。", img:"lava", coll:STAGE_COLL.lava, tint:"rgba(18,4,0,0.18)",
     pal:["#2a211d","#241b18","#322620","#1e1714","#2c221c"], dec:"lava", s:53 },
 };
-const BG={};
+const BG={}, ART={};
 function imgReady(st){ const im=st&&BG[st.img]; return im&&im.complete&&im.naturalWidth>0; }
 function sName(st){ return (lang==="ja"&&st.ja)?st.ja:st.name; }
 function sDesc(st){ return (lang==="ja"&&st.descja)?st.descja:st.desc; }
@@ -706,14 +715,17 @@ function renderMorphCutscene(){
   cx.save(); cx.translate(W/2,H/2); cx.rotate(-t*0.0006); cx.globalAlpha=0.06; cx.fillStyle="#fff";
   for(let i=0;i<24;i++){ cx.rotate(TAU/24); cx.beginPath(); cx.moveTo(0,0); cx.lineTo(10,-1400); cx.lineTo(-10,-1400); cx.closePath(); cx.fill(); }
   cx.restore(); cx.globalAlpha=1;
-  // 캐릭터 (섬광 전 기본형 → 후 변신형) 대형 포즈
+  // 캐릭터 컷인: 섬광 후 변신 일러스트(사진), 전엔 스프라이트
   const showMorph=player.morphed;
-  const key=showMorph?C.morphSheet:C.sheet;
-  const grow=showMorph?(1+Math.min((morphT-MORPH_FLASH)/400,1)*0.12):1;
-  const bigH=Math.min(W,H)*0.46*grow;
-  const baseY=H/2+bigH*0.42;
-  if(!blitSheet(key, W/2, baseY, bigH, 0, ROW_DOWN)){
-    cx.save(); cx.translate(W/2, baseY); const sc=bigH/40; cx.scale(sc,sc); (showMorph?C.drawMorph:C.draw)(0,0); cx.restore();
+  const cut=ART["cut_"+player.char];
+  if(showMorph && cut && cut.complete && cut.naturalWidth){
+    const grow=1+Math.min((morphT-MORPH_FLASH)/400,1)*0.06;
+    const iw=cut.naturalWidth, ih=cut.naturalHeight, scale=Math.min(W/iw, (H*0.62)/ih)*1.02*grow;
+    const dw=iw*scale, dh=ih*scale; cx.save(); cx.shadowColor=col; cx.shadowBlur=30;
+    cx.drawImage(cut, W/2-dw/2, H/2-dh/2+10, dw, dh); cx.restore();
+  } else {
+    const key=showMorph?C.morphSheet:C.sheet, bigH=Math.min(W,H)*0.46, baseY=H/2+bigH*0.42;
+    if(!blitSheet(key, W/2, baseY, bigH, 0, ROW_DOWN)){ cx.save(); cx.translate(W/2, baseY); const sc=bigH/40; cx.scale(sc,sc); (showMorph?C.drawMorph:C.draw)(0,0); cx.restore(); }
   }
   // 변신 섬광
   if(morphT>=MORPH_FLASH-120 && morphT<=MORPH_FLASH+220){ cx.globalAlpha=1-Math.abs(morphT-MORPH_FLASH)/220; cx.fillStyle="#fff"; cx.fillRect(0,0,W,H); cx.globalAlpha=1; }
@@ -1400,7 +1412,7 @@ function showSelect(){
   const list=document.getElementById("charlist"); list.innerHTML="";
   for(const k in CHARS){ const C=CHARS[k]; const el=document.createElement("div"); el.className="card"+(C.locked?" locked":"");
     if(C.locked){ el.innerHTML=`<div class="ic">🔒</div><div><div class="nm">${chName(C)}</div><div class="ds">${chRole(C)}</div></div>`; }
-    else { el.innerHTML=`<div class="ic" style="border-color:${C.swatch};padding:0"><canvas class="pcv" id="pc_${k}" width="50" height="56"></canvas></div>
+    else { el.innerHTML=`<img class="charphoto" src="sprites/art/cut_${k}.jpg?v=1" alt="">
       <div><div class="nm">${chName(C)} <small>${chRole(C)}</small></div><div class="ds">${chDesc(C)}</div>
       <div class="tags"><span class="tag">${WEAPONS[C.base].icon} ${LN(WEAPONS[C.base])}</span>
       <span class="tag">${WEAPONS[C.signature].icon} ${LN(WEAPONS[C.signature])}</span>
@@ -1455,6 +1467,7 @@ function onSheetLoad(){ if(state==="title") drawPortraits(); }
   const im=new Image(); im.onload=onSheetLoad; im.src="sprites/sheets/"+n+".png?v=6"; SHEETS[n.replace("_basic","")]=im;
 });
 ["ruins","lava","snow","forest"].forEach(n=>{ const im=new Image(); im.src="sprites/bg/"+n+".jpg?v=3"; BG[n]=im; });
+["cut_gwangmin","cut_akane","cut_minmin"].forEach(n=>{ const im=new Image(); im.src="sprites/art/"+n+".jpg?v=1"; ART[n]=im; });
 document.getElementById("howbtn").onclick=()=>alert(T("howtext"));
 if(muted){ const mb=document.getElementById("mutebtn"); if(mb)mb.textContent="🔇"; }
 applyLang(); refreshGoldLabels();
