@@ -69,6 +69,13 @@
     -webkit-text-stroke:2px #2a0c08; text-shadow:0 3px 0 #7a1208; filter:drop-shadow(0 5px 8px #000a); }
   @media (max-width:380px){ .logomain{ font-size:38px; } }
   .charphoto{ width:78px; height:64px; object-fit:cover; object-position:center 28%; border-radius:10px; border:1px solid #2a3650; flex:none; }
+  /* 메카 대전 컨트롤 */
+  #mechactrl{ position:fixed; left:0; right:0; bottom:0; padding:0 10px calc(12px + env(safe-area-inset-bottom)); display:flex; justify-content:space-between; align-items:flex-end; pointer-events:none; z-index:15; }
+  #mechactrl .grp{ display:flex; gap:8px; pointer-events:auto; }
+  .mbtn{ width:54px; height:54px; border-radius:14px; background:#1d2640cc; border:1px solid #4a5a86; color:#cdd8ec; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .mbtn:active{ background:#e0b14e; color:#1a1206; transform:translateY(2px); }
+  .mbtn.big{ width:62px; height:62px; font-size:14px; }
+  .mbtn.sp{ border-color:#ffd24a; color:#ffd24a; }
   /* shop rows */
   .shoprow{ display:flex; align-items:center; gap:12px; text-align:left; width:100%;
     background:linear-gradient(180deg,#172138,#0f1626); border:1px solid #32507e; border-radius:14px; padding:11px 14px; }
@@ -172,6 +179,12 @@
   </div>
   <button class="btn" id="retrybtn">다시 도전</button>
   <button class="btn sec" id="tohome">캐릭터 다시 선택</button>
+</div>
+
+<!-- 메카 대전 컨트롤 -->
+<div id="mechactrl" class="hidden">
+  <div class="grp"><div class="mbtn" id="mb_left">◀</div><div class="mbtn" id="mb_right">▶</div></div>
+  <div class="grp"><div class="mbtn" id="mb_guard">🛡</div><div class="mbtn" id="mb_punch">👊</div><div class="mbtn big" id="mb_kick">🦵</div><div class="mbtn big sp" id="mb_special">⚡필살</div></div>
 </div>
 
 <script>
@@ -506,6 +519,8 @@ let state="title", t=0, lastTs=0;
 let player, cam, enemies, gems, shots, orbs, fx, dmgtexts, stage, chests, pickups;
 let elapsed=0, kills=0, spawnAcc=0, bossTimer=0, crateTimer=0, stageBossSpawned=false, won=false;
 let warnT=0, warnText="", clearT=0;
+let mecha=null, kaiju=null, introT=0, mPow=10, mechaFlash=0;
+const mInput={left:false,right:false,guard:false,punch:false,kick:false,special:false};
 let shakeT=0, shakeMag=0;
 function addShake(m,d){ shakeMag=Math.max(shakeMag,m); shakeT=Math.max(shakeT,d); }
 
@@ -531,7 +546,8 @@ function startGame(charKey, stageKey){
   player=newPlayer(charKey);
   const sp=spawnPoint(stage); player.x=sp.x; player.y=sp.y; cam={x:sp.x,y:sp.y};
   enemies=[]; gems=[]; shots=[]; orbs=[]; fx=[]; dmgtexts=[]; chests=[]; pickups=[];
-  elapsed=0; kills=0; spawnAcc=0; bossTimer=0; crateTimer=0; stageBossSpawned=false; won=false; warnT=0; clearT=0;
+  elapsed=0; kills=0; spawnAcc=0; bossTimer=0; crateTimer=0; stageBossSpawned=false; won=false; warnT=0; clearT=0; mecha=null; kaiju=null; introT=0; mechaFlash=0;
+  document.getElementById("mechactrl").classList.add("hidden");
   rebuildOrbs(); state="play";
   ["title","select","stage","over","levelup","shop"].forEach(id=>document.getElementById(id).classList.add("hidden"));
   document.getElementById("hud").classList.remove("hidden");
@@ -761,7 +777,7 @@ function renderMorphCutscene(){
 function update(dt){
   t+=dt; elapsed+=dt;
   if(!player.morphed && elapsed>=MORPH_MS){ startMorph(); return; }
-  if(elapsed>=BOSS_MS && !stageBossSpawned){ stageBossSpawned=true; spawnEnemy("stageboss"); warn(lang==="ja"?"W A R N I N G":"W A R N I N G"); sfx("bossappear"); addShake(8,400); }
+  if(elapsed>=BOSS_MS && !stageBossSpawned){ stageBossSpawned=true; startMecha(); return; }
 
   const iv=inputVector();
   if(iv.mag>0.05){ player.x+=iv.x*player.speed*(dt/16.6); player.y+=iv.y*player.speed*(dt/16.6);
@@ -1500,6 +1516,104 @@ function renderClear(){
   cx.font="900 "+(42+(1-s)*36)+"px system-ui"; cx.lineWidth=5; cx.strokeStyle="#7a1208"; cx.fillStyle="#ffd86a";
   const txt=lang==="ja"?"ステージクリア！":"스테이지 클리어!"; cx.strokeText(txt,W/2,H*0.26); cx.fillText(txt,W/2,H*0.26); cx.restore(); cx.textAlign="left"; cx.globalAlpha=1;
 }
+/* ============================================================
+   거대 메카 vs 괴수 — 대전격투 보스전
+   ============================================================ */
+function startMecha(){
+  state="mecha"; document.getElementById("hud").classList.add("hidden"); document.getElementById("mechactrl").classList.remove("hidden");
+  const gy=H*0.82; mPow=9+player.stats.might*7+player.level*0.6;
+  mecha={x:W*0.30,y:gy,face:1,maxhp:Math.round(300+player.maxhp*0.5),atkCd:0,action:"",actionT:0,guard:false,sp:0,hurtT:0};
+  mecha.hp=mecha.maxhp;
+  kaiju={x:W*0.74,y:gy,face:-1,maxhp:Math.round(1100+player.level*55),atkCd:1800,action:"",actionT:0,hurtT:0,tele:0,beam:false};
+  kaiju.hp=kaiju.maxhp;
+  introT=1900; mechaFlash=0; warn(lang==="ja"?"W A R N I N G":"W A R N I N G"); sfx("morph"); addShake(9,500);
+  for(const k in mInput) mInput[k]=false;
+}
+function bossHurt(d){ kaiju.hp-=d; kaiju.hurtT=100; mecha.sp=Math.min(100,mecha.sp+6); sfx("hit"); }
+function mechaHurt(d){ if(mecha.hurtT>0)return; mecha.hp-=d; mecha.hurtT=260; mecha.sp=Math.min(100,mecha.sp+9); sfx("hurt"); addShake(5,160); }
+function updateMecha(dt){ t+=dt;
+  if(introT>0){ introT-=dt; return; }
+  if(mecha.atkCd>0)mecha.atkCd-=dt; if(mecha.hurtT>0)mecha.hurtT-=dt; if(mecha.action&&(mecha.actionT-=dt)<=0)mecha.action="";
+  if(mechaFlash>0)mechaFlash-=dt;
+  const sp=3.2; if(mInput.left)mecha.x-=sp; if(mInput.right)mecha.x+=sp; mecha.x=clamp(mecha.x,W*0.12,kaiju.x-66);
+  mecha.guard=mInput.guard; const dist=Math.abs(kaiju.x-mecha.x);
+  if(mInput.punch){ mInput.punch=false; if(mecha.atkCd<=0&&!mecha.guard){ mecha.atkCd=300; mecha.action="punch"; mecha.actionT=200; if(dist<118) bossHurt(mPow*1.3); } }
+  if(mInput.kick){ mInput.kick=false; if(mecha.atkCd<=0&&!mecha.guard){ mecha.atkCd=640; mecha.action="kick"; mecha.actionT=320; if(dist<146){ bossHurt(mPow*2.6); kaiju.x+=10; } } }
+  if(mInput.special){ mInput.special=false; if(mecha.sp>=100){ mecha.sp=0; mecha.action="special"; mecha.actionT=760; mechaFlash=420; bossHurt(mPow*10); addShake(16,520); sfx("boom"); } }
+  if(kaiju.hurtT>0)kaiju.hurtT-=dt; if(kaiju.action&&(kaiju.actionT-=dt)<=0)kaiju.action="";
+  if(kaiju.tele>0){ kaiju.tele-=dt;
+    if(kaiju.tele<=0){
+      if(kaiju.beam){ mechaHurt(mecha.guard?mPow*0.5:mPow*1.7); kaiju.beam=false; kaiju.action="beam"; kaiju.actionT=320; }
+      else { if(dist<160){ mechaHurt(mecha.guard?mPow*0.4:mPow*1.4); if(!mecha.guard)mecha.x=clamp(mecha.x-46,W*0.12,kaiju.x-66);} kaiju.action="hit"; kaiju.actionT=260; }
+    }
+  } else { kaiju.atkCd-=dt;
+    if(dist>185){ kaiju.x-=1.5; }
+    else if(kaiju.atkCd<=0){ kaiju.atkCd=1300+Math.random()*900;
+      if(Math.random()<0.32){ kaiju.tele=620; kaiju.beam=true; kaiju.action="windbeam"; kaiju.actionT=620; }
+      else { kaiju.tele=480; kaiju.action="windup"; kaiju.actionT=480; } }
+  }
+  kaiju.x=clamp(kaiju.x,mecha.x+60,W*0.9);
+  if(mecha.hp<=0){ document.getElementById("mechactrl").classList.add("hidden"); lose(); }
+  else if(kaiju.hp<=0){ document.getElementById("mechactrl").classList.add("hidden"); startClear(); }
+}
+function drawKaiju(k){ const gy=k.y, gl=0.6+Math.sin(t*0.01)*0.4, sh=k.hurtT>0&&Math.floor(t/40)%2===0;
+  cx.save(); cx.translate(k.x,gy); cx.scale(k.face,1);
+  const wind=(k.action==="windup"||k.action==="windbeam")?Math.min(1,1-(k.actionT/600)):0, strike=(k.action==="hit"||k.action==="beam")?1:0;
+  const body=sh?"#fff":"#3a2b1e", body2=sh?"#fff":"#4a3826", claw=sh?"#fff":"#2a1f14";
+  pxr(-44,-58,24,58,body); pxr(8,-58,24,58,body);
+  cx.fillStyle=body2; cx.beginPath(); cx.ellipse(-8,-104,52,56,0,0,TAU); cx.fill();
+  pxr(-46,-128,76,44,sh?"#fff":"#5a4630");
+  const armY=-150-wind*40+strike*30; cx.fillStyle=body; pxr(20,-150,22,60,body); cx.beginPath(); cx.arc(31,armY,18,0,TAU); cx.fill();
+  cx.fillStyle=claw; for(let i=0;i<3;i++) pxr(20+i*8,armY-4,5,16,claw); pxr(-54,-150,20,54,body);
+  cx.fillStyle=body2; cx.beginPath(); cx.arc(2,-168,30,0,TAU); cx.fill();
+  cx.fillStyle=claw; cx.beginPath(); cx.moveTo(-14,-188); cx.lineTo(-22,-214); cx.lineTo(-4,-190); cx.fill(); cx.beginPath(); cx.moveTo(18,-188); cx.lineTo(26,-214); cx.lineTo(8,-190); cx.fill();
+  cx.save(); cx.globalAlpha=gl; cx.shadowColor="#ff3b2a"; cx.shadowBlur=18; cx.fillStyle="#ffea00"; cx.beginPath(); cx.arc(-10,-160,5,0,TAU); cx.arc(14,-160,5,0,TAU); cx.fill();
+  if(k.beam&&k.tele>0){ cx.fillStyle="#ff6a2a"; cx.beginPath(); cx.arc(-26,-158,8+wind*8,0,TAU); cx.fill(); } cx.restore();
+  cx.fillStyle="#fff"; pxr(-18,-150,4,6,"#fff"); pxr(-6,-150,4,6,"#fff"); pxr(8,-150,4,6,"#fff");
+  cx.restore();
+  if(k.action==="beam"){ cx.save(); cx.globalAlpha=0.85; cx.fillStyle="#ff7a2a"; cx.shadowColor="#ff3b2a"; cx.shadowBlur=20; const by=gy-160; cx.fillRect(0,by-12,k.x-20,24); cx.fillStyle="#fff4c0"; cx.fillRect(0,by-5,k.x-20,10); cx.restore(); cx.globalAlpha=1; }
+}
+function drawMecha(m){ const col=CHARS[player.char].swatch, gy=m.y, sh=m.hurtT>0&&Math.floor(t/50)%2===0;
+  cx.save(); cx.translate(m.x,gy); cx.scale(m.face,1);
+  const punch=m.action==="punch"?1:0, kick=m.action==="kick"?1:0, sptl=m.action==="special"?1:0;
+  const main=sh?"#fff":col, steel="#cfd6e2", dark="#2a3140";
+  pxr(-16,-30,12,30,dark);
+  if(kick){ cx.fillStyle=steel; pxr(6,-26,30,10,steel); pxr(34,-28,8,14,"#9aa6ba"); } else { pxr(4,-32,12,32,steel); } pxr(-16,-32,12,32,steel);
+  cx.fillStyle=main; pxr(-18,-66,36,38,main); cx.fillStyle="#fff"; pxr(-12,-62,24,18,"#fff"); cx.fillStyle=col; pxr(-12,-62,24,5,col);
+  if(m.guard){ cx.fillStyle=steel; pxr(-26,-64,10,40,steel); pxr(16,-64,10,40,steel); }
+  else { cx.fillStyle=steel; pxr(-26,-64,10,26,steel); const px=punch?36:16; cx.fillStyle=main; pxr(14,-60,Math.max(10,px-2),9,main); cx.fillStyle="#9aa6ba"; cx.beginPath(); cx.arc(px,-55,9,0,TAU); cx.fill(); }
+  cx.fillStyle=steel; cx.beginPath(); cx.arc(0,-74,11,0,TAU); cx.fill();
+  cx.fillStyle="#101620"; pxr(-9,-76,18,5,"#101620"); cx.fillStyle=col; pxr(-9,-77,18,2,col);
+  cx.fillStyle="#7af0ff"; pxr(-6,-75,4,2,"#7af0ff"); pxr(2,-75,4,2,"#7af0ff");
+  cx.fillStyle=col; cx.beginPath(); cx.moveTo(0,-85); cx.lineTo(-3,-94); cx.lineTo(3,-94); cx.fill();
+  if(sptl){ cx.save(); cx.globalAlpha=0.6+Math.sin(t*0.05)*0.3; cx.shadowColor=col; cx.shadowBlur=20; cx.fillStyle="#fff"; pxr(-18,-66,36,38,"#fff"); cx.restore(); }
+  cx.restore();
+  if(sptl){ cx.save(); cx.globalAlpha=0.9; const by=gy-52; cx.shadowColor=col; cx.shadowBlur=24; const g=cx.createLinearGradient(m.x,0,kaiju.x,0); g.addColorStop(0,"#fff"); g.addColorStop(1,col); cx.fillStyle=g; cx.fillRect(m.x+16,by-16,kaiju.x-m.x,32); cx.fillStyle="#fff"; cx.fillRect(m.x+16,by-6,kaiju.x-m.x,12); cx.restore(); cx.globalAlpha=1; }
+}
+function hbar(x,y,w,h,frac,col,flip){ cx.fillStyle="#000a"; cx.fillRect(x,y,w,h); cx.fillStyle="#2a3142"; cx.fillRect(x+2,y+2,w-4,h-4);
+  const iw=(w-4)*clamp(frac,0,1); cx.fillStyle=col; cx.fillRect(flip?(x+w-2-iw):(x+2),y+2,iw,h-4); }
+function renderMecha(){ cx.clearRect(0,0,W,H);
+  let shaken=false; if(shakeT>0){ shakeT-=16; const amp=shakeMag*Math.min(1,shakeT/160); cx.save(); cx.translate(rand(-amp,amp),rand(-amp,amp)); shaken=true; }
+  const img=BG[stage.img];
+  if(img&&img.complete&&img.naturalWidth){ const s=Math.max(W/img.naturalWidth,(H*0.82)/img.naturalHeight),dw=img.naturalWidth*s,dh=img.naturalHeight*s; cx.drawImage(img,(W-dw)/2,0,dw,dh); }
+  else { cx.fillStyle="#0c1018"; cx.fillRect(0,0,W,H); }
+  cx.fillStyle="rgba(6,8,16,0.5)"; cx.fillRect(0,0,W,H);
+  const gy=H*0.82; cx.fillStyle="#15110c"; cx.fillRect(0,gy,W,H-gy); cx.fillStyle="#2a2114"; cx.fillRect(0,gy,W,4);
+  if(mechaFlash>0){ cx.fillStyle="rgba(255,255,255,"+clamp(mechaFlash/420,0,1)*0.6+")"; cx.fillRect(0,0,W,H); }
+  drawKaiju(kaiju); drawMecha(mecha);
+  if(shaken) cx.restore();
+  hbar(10,12,W*0.42,16,mecha.hp/mecha.maxhp,"#39d36a",false);
+  hbar(W-10-W*0.42,12,W*0.42,16,kaiju.hp/kaiju.maxhp,"#e0492f",true);
+  hbar(10,32,W*0.42,7,mecha.sp/100,"#ffd24a",false);
+  cx.fillStyle="#fff"; cx.font="800 12px system-ui"; cx.textAlign="left"; cx.fillText(chMorph(CHARS[player.char])+" ROBO",12,52);
+  cx.textAlign="right"; cx.fillText(lang==="ja"?"巨大怪獣":"거대 괴수",W-12,26); cx.textAlign="left";
+  if(mecha.sp>=100){ cx.fillStyle=Math.floor(t/200)%2?"#ffd24a":"#fff"; cx.fillText(lang==="ja"?"必殺 READY!":"필살기 READY!",12,66); }
+  if(warnT>0){ warnT-=16; const bl=(Math.floor(t/120)%2)===0,by=H*0.40,bh=84; cx.save(); cx.globalAlpha=0.88; cx.fillStyle="#120000"; cx.fillRect(0,by,W,bh);
+    cx.fillStyle=bl?"#ff2a2a":"#ffd200"; cx.fillRect(0,by,W,4); cx.fillRect(0,by+bh-4,W,4); cx.textAlign="center"; cx.fillStyle=bl?"#ff3a3a":"#fff"; cx.font="900 34px system-ui"; cx.fillText("W A R N I N G",W/2,by+bh*0.46);
+    cx.fillStyle="#ffd200"; cx.font="800 13px system-ui"; cx.fillText(lang==="ja"?"巨大怪獣 出現 — ロボ起動！":"거대 괴수 출현 — 로봇 기동!",W/2,by+bh*0.8); cx.textAlign="left"; cx.restore(); }
+  else if(introT>0){ const s=clamp((1900-introT)/300,0,1); cx.save(); cx.textAlign="center"; cx.globalAlpha=s; cx.fillStyle="#ffd86a"; cx.strokeStyle="#7a1208"; cx.lineWidth=5; cx.font="900 42px system-ui";
+    const f=introT<560?(lang==="ja"?"ファイト！":"파이트!"):(lang==="ja"?"ロボ 起動！":"로봇 기동!"); cx.strokeText(f,W/2,H*0.4); cx.fillText(f,W/2,H*0.4); cx.restore(); cx.textAlign="left"; cx.globalAlpha=1; }
+}
 function finishWin(){ if(state==="over")return; won=true; state="over"; const g=awardGold(true);
   document.getElementById("overttl").textContent=lang==="ja"?"ステージクリア！":"스테이지 클리어!";
   document.getElementById("overmsg").innerHTML=lang==="ja"?("20分の死闘の末、ステージボスを撃破！<br>"+chMorph(CHARS[player.char])+"の活躍でゲートは閉じた。✨"):("20분의 사투 끝에 스테이지 보스를 처치했다.<br>"+chMorph(CHARS[player.char])+"의 활약으로 게이트는 닫혔다. ✨");
@@ -1579,11 +1693,12 @@ function loop(ts){ const dt=Math.min(40,ts-lastTs||16); lastTs=ts;
   if(state==="play") update(dt);
   else if(state==="morphing"){ updateMorph(dt); render(); requestAnimationFrame(loop); return; }
   else if(state==="clear"){ updateClear(dt); renderClear(); requestAnimationFrame(loop); return; }
+  else if(state==="mecha"){ updateMecha(dt); renderMecha(); requestAnimationFrame(loop); return; }
   if(state==="play"||state==="levelup"||state==="over"||state==="paused") render();
   requestAnimationFrame(loop); }
 requestAnimationFrame(loop);
 
-function goHome(){ ["select","stage","over","shop","levelup","hud"].forEach(id=>document.getElementById(id).classList.add("hidden")); document.getElementById("title").classList.remove("hidden"); state="title"; refreshGoldLabels(); }
+function goHome(){ ["select","stage","over","shop","levelup","hud","mechactrl"].forEach(id=>document.getElementById(id).classList.add("hidden")); document.getElementById("title").classList.remove("hidden"); state="title"; refreshGoldLabels(); }
 document.getElementById("startbtn").onclick=()=>{ audioInit(); showSelect(); };
 document.getElementById("langbtn").onclick=toggleLang;
 document.getElementById("mutebtn").onclick=()=>{ audioInit(); toggleMute(); };
@@ -1594,6 +1709,20 @@ document.getElementById("shopback").onclick=goHome;
 document.getElementById("retrybtn").onclick=()=>{ if(player) startGame(player.char, stage?stage.id:lastStageKey); };
 document.getElementById("tohome").onclick=showSelect;
 document.getElementById("rouletteGo").onclick=closeRoulette;
+// 메카 대전 컨트롤
+function mHold(id,key){ const e=document.getElementById(id); if(!e)return;
+  const on=ev=>{ev.preventDefault(); mInput[key]=true;}, off=ev=>{if(ev)ev.preventDefault(); mInput[key]=false;};
+  e.addEventListener("touchstart",on,{passive:false}); e.addEventListener("touchend",off,{passive:false}); e.addEventListener("touchcancel",off);
+  e.addEventListener("mousedown",on); e.addEventListener("mouseup",off); e.addEventListener("mouseleave",off); }
+function mTap(id,key){ const e=document.getElementById(id); if(!e)return;
+  const on=ev=>{ev.preventDefault(); audioInit(); mInput[key]=true;};
+  e.addEventListener("touchstart",on,{passive:false}); e.addEventListener("mousedown",on); }
+mHold("mb_left","left"); mHold("mb_right","right"); mHold("mb_guard","guard");
+mTap("mb_punch","punch"); mTap("mb_kick","kick"); mTap("mb_special","special");
+addEventListener("keydown",e=>{ if(state!=="mecha")return; const k=e.key.toLowerCase();
+  if(k==="arrowleft"||k==="a")mInput.left=true; else if(k==="arrowright"||k==="d")mInput.right=true;
+  else if(k===" "||k==="shift")mInput.guard=true; else if(k==="j"||k==="z")mInput.punch=true; else if(k==="k"||k==="x")mInput.kick=true; else if(k==="l"||k==="c")mInput.special=true; });
+addEventListener("keyup",e=>{ const k=e.key.toLowerCase(); if(k==="arrowleft"||k==="a")mInput.left=false; else if(k==="arrowright"||k==="d")mInput.right=false; else if(k===" "||k==="shift")mInput.guard=false; });
 
 // 에셋 로딩 (상태 초기화 이후)
 function onSheetLoad(){ if(state==="title") drawPortraits(); }
