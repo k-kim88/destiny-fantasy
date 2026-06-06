@@ -215,7 +215,7 @@ const WEAPONS={
   grenade: {name:"수류탄",     icon:"💣", max:8, excl:true},
   sonic:   {name:"음파 마이크", icon:"🎤", max:8, excl:true},
   sparkle: {name:"반짝임",     icon:"✨", max:8, excl:true},
-  fist:    {name:"건틀릿 난타", icon:"🥊", max:8, excl:true},
+  fist:    {name:"베어너클",   icon:"🐾", max:8, excl:true},
   slam:    {name:"대지 강타",   icon:"💥", max:8, excl:true},
   blade:   {name:"에너지 블레이드", icon:"🗡️", max:8},
   drone:   {name:"수호 드론",   icon:"🛸", max:8},
@@ -241,23 +241,41 @@ const CHARS={
     sheet:"akane", morphSheet:"samonpink",
     draw:(x,y)=>drawAkane(x,y), drawMorph:(x,y)=>drawSalmonPink(x,y) },
   minmin:{ key:"minmin", name:"민민", role:"각성한 야수", emoji:"🐻",
-    desc:"강철 건틀릿을 두른 곰 전사. 대지를 강타해 적을 짓밟는다.",
+    desc:"베어너클로 할퀴고 대지를 강타하는 곰 전사.",
     base:"fist", signature:"slam", morphName:"골드베어", swatch:"#d9a23a",
     sheet:"minmin", morphSheet:"goldbear",
     draw:(x,y)=>drawGwangmin(x,y), drawMorph:(x,y)=>drawGwangmin(x,y) },
   c4:{ key:"c4", name:"???", role:"COMING SOON", emoji:"❔", locked:true },
   c5:{ key:"c5", name:"???", role:"COMING SOON", emoji:"❔", locked:true },
 };
-// 4방향 스프라이트 시트 (4열=애니 프레임, 4행=정면/좌/우/후면) / 배경 — 로딩은 하단(상태 초기화 후)
-const SHEETS={}, BG={};
+// 4방향 스프라이트 시트 (4열=애니 프레임, 4행=정면/좌/우/후면) — 로딩은 하단(상태 초기화 후)
+const SHEETS={};
 const ROW_DOWN=0, ROW_LEFT=1, ROW_RIGHT=2, ROW_UP=3;
-// 스테이지(장소) — 배경 이미지 + 가독성용 어둠 틴트
+function hash2(x,y){ let h=(x|0)*374761393 + (y|0)*668265263; h=(h^(h>>>13))*1274126177; return (h>>>0); }
+// 스테이지(장소) — 16도트 픽셀 절차 배경 (바닥 평면 위주)
 const STAGES={
-  city:{ id:"city", name:"도심 폐허", emoji:"🏙️", desc:"무너진 도시. 마물이 거리를 메운다.", img:"city", tint:"rgba(8,10,20,0.22)" },
-  forest:{ id:"forest", name:"마경의 숲", emoji:"🌲", desc:"마력이 깃든 어둠의 숲.", img:"forest", tint:"rgba(6,16,10,0.22)" },
-  snow:{ id:"snow", name:"설원 전선", emoji:"❄️", desc:"눈보라가 몰아치는 동토.", img:"snow", tint:"rgba(20,28,46,0.16)" },
-  lava:{ id:"lava", name:"용암 지대", emoji:"🌋", desc:"붉게 타오르는 화산 지대.", img:"lava", tint:"rgba(18,4,0,0.18)" },
+  city:{ id:"city", name:"도심 폐허", emoji:"🏙️", desc:"무너진 도시. 갈라진 아스팔트.",
+    pal:["#3a3f47","#33383f","#2c3138","#42474f","#363b43"], dec:"city", tint:"rgba(10,12,22,0.10)", s:11 },
+  forest:{ id:"forest", name:"마경의 숲", emoji:"🌲", desc:"마력이 깃든 어둠의 풀밭.",
+    pal:["#27331f","#223016","#2c3a22","#1e2a16","#243318"], dec:"forest", tint:"rgba(6,16,10,0.10)", s:23 },
+  snow:{ id:"snow", name:"설원 전선", emoji:"❄️", desc:"눈 덮인 동토.",
+    pal:["#c9d6e6","#bccadd","#d4e0ee","#b2c1d6","#c2cfe1"], dec:"snow", tint:"rgba(20,28,46,0.06)", s:37 },
+  lava:{ id:"lava", name:"용암 지대", emoji:"🌋", desc:"식은 용암 위 균열.",
+    pal:["#2a211d","#241b18","#322620","#1e1714","#2c221c"], dec:"lava", tint:"rgba(18,4,0,0.10)", s:53 },
 };
+function makeTile(st){
+  const SZ=384, D=8, n=SZ/D; const c=document.createElement("canvas"); c.width=c.height=SZ; const g=c.getContext("2d");
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){ const h=hash2(x+st.s*5,y+st.s*9); g.fillStyle=st.pal[h%st.pal.length]; g.fillRect(x*D,y*D,D,D); }
+  st._tile=c; return c;
+}
+function pxr(x,y,w,h,c){ cx.fillStyle=c; cx.fillRect(x|0,y|0,w,h); }
+function drawDecal(st,x,y,h){
+  if(st.dec==="city"){ pxr(x,y,8,8,"#4a505a"); pxr(x+2,y+2,4,4,"#565d68"); if(h&1){pxr(x-7,y+5,9,2,"#23282f"); pxr(x+5,y-4,2,7,"#23282f");} }
+  else if(st.dec==="forest"){ pxr(x,y,2,6,"#3c5e2a"); pxr(x+3,y-2,2,8,"#4a6c30"); pxr(x-3,y+1,2,6,"#34521f");
+    if(h%3===0) pxr(x+1,y-6,3,3,"#c0405a"); else if(h%3===1) pxr(x+1,y-5,3,3,"#d8c24a"); }
+  else if(st.dec==="snow"){ pxr(x,y,6,2,"#eef4fc"); pxr(x+1,y-2,2,2,"#ffffff"); if(h&1){pxr(x-5,y+3,10,1,"#9fb0ca");} }
+  else if(st.dec==="lava"){ pxr(x-6,y,12,2,"#ff5a14"); pxr(x,y-5,2,10,"#ff7a2e"); pxr(x,y,2,2,"#ffd24a"); pxr(x-6,y,2,2,"#c83a0e"); }
+}
 function blitSheet(key, sx, sy, destH, col, row, alpha){
   const img=SHEETS[key]; if(!img||!img.complete||!img.naturalWidth) return false;
   const cw=img.naturalWidth/4, ch=img.naturalHeight/4, dw=cw/ch*destH;
@@ -400,20 +418,19 @@ function tickWeapons(dt){
     fx.push({kind:"sparkle",x:player.x,y:player.y,r:range,t:0,dur:520});
     for(const e of enemies){ if(dist2(player.x,player.y,e.x,e.y)<range*range){ hurtEnemy(e,dmg); knock(e,player.x,player.y,7);} }
   }
-  // 건틀릿 난타 (민민 기본) — 주변 근접 연타 + 넉백
+  // 베어너클 (민민 기본) — 발톱으로 주변을 할퀴어 연타·넉백
   if(wlv("fist")>0 && (T.fist||0)<=0){
-    const L=wlv("fist"); T.fist=(620-L*35)*cdMul();
-    const range=(40+L*6)*area(), dmg=(11+L*6)*might();
-    fx.push({kind:"aura",x:player.x,y:player.y,r:range,t:0,dur:160});
+    const L=wlv("fist"); T.fist=(560-L*32)*cdMul();
+    const range=(42+L*6)*area(), dmg=(12+L*6)*might();
+    fx.push({kind:"claw",x:player.x,y:player.y,r:range,t:0,dur:220,dir:player.face,seed:hash2(t|0,L)});
     for(const e of enemies){ if(dist2(player.x,player.y,e.x,e.y)<range*range){ hurtEnemy(e,dmg); knock(e,player.x,player.y,5);} }
   }
-  // 대지 강타 (민민 전용) — 강력한 충격파 + 강한 넉백
+  // 대지 강타 (민민 전용) — 땅이 부서지는 충격파 + 강한 넉백
   if(wlv("slam")>0 && (T.slam||0)<=0){
     const L=wlv("slam"); T.slam=(2600-L*150)*cdMul();
     const maxr=(85+L*16)*area(), dmg=(26+L*11)*might();
-    fx.push({kind:"boom",x:player.x,y:player.y,r:maxr,t:0,dur:420});
-    shots.push({kind:"ring",x:player.x,y:player.y,t:0,dur:380,maxr,dmg,band:20,hitset:new Set()});
-    for(const e of enemies){ if(dist2(player.x,player.y,e.x,e.y)<maxr*maxr) knock(e,player.x,player.y,16); }
+    fx.push({kind:"shatter",x:player.x,y:player.y,r:maxr,t:0,dur:500,seed:hash2((t|0)+7,L)});
+    for(const e of enemies){ if(dist2(player.x,player.y,e.x,e.y)<maxr*maxr){ hurtEnemy(e,dmg); knock(e,player.x,player.y,16);} }
   }
   // 에너지 블레이드 (공용)
   if(wlv("blade")>0 && (T.blade||0)<=0){
@@ -615,8 +632,8 @@ function wepDesc(k,lvl){ switch(k){
   case "grenade":return "가까운 적에게 수류탄을 던져 광역 폭발 (광민 전용)";
   case "sonic":return "사방으로 음파 충격파를 발산 (아카네 전용)";
   case "sparkle":return `반짝임 보호막 ${1+Math.ceil(lvl/2)}회 방어 + 노바 (아카네 전용)`;
-  case "fist":return "주변 적을 건틀릿으로 빠르게 연타·넉백 (민민 전용)";
-  case "slam":return "대지를 강타해 강력한 충격파와 넉백 (민민 전용)";
+  case "fist":return "곰의 발톱으로 주변을 할퀴어 빠르게 연타·넉백 (민민 전용)";
+  case "slam":return "땅을 부숴 충격파로 적을 멀리 날린다 (민민 전용)";
   case "blade":return lvl>=6?"에너지 칼날을 360° 휘둘러 베어낸다":"전방으로 에너지 칼날을 베어낸다";
   case "drone":return `수호 드론 ${2+Math.floor(lvl*0.8)}기가 주위를 돌며 타격`;
   case "aura":return "몸 주위에 지속 피해 오라를 두른다";
@@ -728,13 +745,17 @@ function flash(msg){ flashMsg=msg; flashT=2200; }
    ============================================================ */
 function w2s(x,y){ return [x-cam.x+W/2, y-cam.y+H/2]; }
 function drawGround(){
-  const st=stage||STAGES.city; const img=BG[st.img];
-  if(img&&img.complete&&img.naturalWidth){
-    const iw=img.naturalWidth, ih=img.naturalHeight;
-    let ox=(W/2-cam.x)%iw; if(ox>0)ox-=iw;
-    let oy=(H/2-cam.y)%ih; if(oy>0)oy-=ih;
-    for(let x=ox;x<W;x+=iw) for(let y=oy;y<H;y+=ih) cx.drawImage(img,x,y,iw,ih);
-  } else { cx.fillStyle="#0c1018"; cx.fillRect(0,0,W,H); }
+  const st=stage||STAGES.city; const tile=st._tile||makeTile(st), T=tile.width;
+  cx.imageSmoothingEnabled=false;
+  let ox=(W/2-cam.x)%T; if(ox>0)ox-=T; let oy=(H/2-cam.y)%T; if(oy>0)oy-=T;
+  for(let x=ox;x<W+T;x+=T)for(let y=oy;y<H+T;y+=T) cx.drawImage(tile,Math.floor(x),Math.floor(y));
+  cx.imageSmoothingEnabled=true;
+  // 바닥 데칼(평면) — 월드 해시 배치라 반복 안 됨
+  const G=46, ox2=((-cam.x+W/2)%G+G)%G, oy2=((-cam.y+H/2)%G+G)%G;
+  for(let gx=-G;gx<W+G;gx+=G)for(let gy=-G;gy<H+G;gy+=G){
+    const wx=Math.round((gx+cam.x-W/2)/G), wy=Math.round((gy+cam.y-H/2)/G), h=hash2(wx+st.s,wy-st.s);
+    if(h%3===0){ drawDecal(st, gx+ox2-G+(h%19), gy+oy2-G+((h>>4)%19), h); }
+  }
 }
 function drawEnemy(e){
   const [sx,sy]=w2s(e.x,e.y); if(sx<-60||sx>W+60||sy<-60||sy>H+60)return;
@@ -769,6 +790,28 @@ function drawFx(){
     if(f.kind==="slash"){ cx.save(); cx.translate(sx,sy); cx.globalAlpha=1-p; cx.strokeStyle="#dff0ff"; cx.lineWidth=4-p*3;
       const a0=f.full?0:(f.dir<0?Math.PI-1.2:-1.2), a1=f.full?TAU:(f.dir<0?Math.PI+1.2:1.2);
       cx.beginPath(); cx.arc(0,0,f.r*(0.7+p*0.3),a0,a1); cx.stroke(); cx.globalAlpha=1; cx.restore();
+    } else if(f.kind==="claw"){ // 발톱 할퀴기 — 3줄 사선 스크래치
+      cx.save(); cx.translate(sx,sy); cx.globalAlpha=(1-p)*0.95; cx.lineCap="round";
+      const dir=f.dir||1, sweep=(p-0.5)*0.7, R=f.r;
+      for(let i=0;i<3;i++){ const off=(i-1)*0.34+sweep, a=dir<0?(Math.PI-0.5):(-0.5);
+        cx.strokeStyle=i===1?"#fff":"#ffe7a0"; cx.lineWidth=3.5-i*0.6;
+        cx.beginPath(); cx.moveTo(Math.cos(a+off)*R*0.25, Math.sin(a+off)*R*0.25);
+        cx.lineTo(Math.cos(a+off)*R*1.05, Math.sin(a+off)*R*1.05); cx.stroke(); }
+      cx.globalAlpha=1; cx.restore();
+    } else if(f.kind==="shatter"){ // 대지 강타 — 갈라지는 땅 + 잔해
+      const rr=f.r*(0.35+p*0.75); cx.save(); cx.translate(sx,sy);
+      cx.globalAlpha=(1-p)*0.55; cx.fillStyle="#6a563a"; cx.beginPath(); cx.arc(0,0,rr,0,TAU); cx.fill(); // 먼지
+      cx.globalAlpha=1-p; cx.strokeStyle="#3a2c1c"; cx.lineWidth=3; cx.lineJoin="round";
+      const seed=f.seed||0;
+      for(let i=0;i<8;i++){ const a=i/8*TAU + (seed%10)*0.1; const j=((hash2(seed+i,3)%40)/40-0.5)*0.5;
+        cx.beginPath(); cx.moveTo(0,0);
+        cx.lineTo(Math.cos(a)*rr*0.5, Math.sin(a)*rr*0.5);
+        cx.lineTo(Math.cos(a+j)*rr, Math.sin(a+j)*rr); cx.stroke(); }
+      // 솟구치는 돌조각
+      cx.globalAlpha=1-p; cx.fillStyle="#5a4a32";
+      for(let i=0;i<6;i++){ const a=i/6*TAU+seed, d=rr*(0.6+0.3*((hash2(seed,i)%10)/10)), s=3+ (i%2)*2;
+        pxr(Math.cos(a)*d-s/2, Math.sin(a)*d - p*14, s, s, "#6b5638"); }
+      cx.globalAlpha=1; cx.restore();
     } else if(f.kind==="aura"){ cx.globalAlpha=(1-p)*0.5; cx.fillStyle="#4aa3ff"; cx.beginPath(); cx.arc(sx,sy,f.r,0,TAU); cx.fill(); cx.globalAlpha=1;
     } else if(f.kind==="boom"){ cx.globalAlpha=1-p; cx.fillStyle="#ff8a3a"; cx.beginPath(); cx.arc(sx,sy,f.r*(0.5+p*0.6),0,TAU); cx.fill();
       cx.fillStyle="#ffe06a"; cx.beginPath(); cx.arc(sx,sy,f.r*(0.3+p*0.4),0,TAU); cx.fill(); cx.globalAlpha=1;
@@ -1010,12 +1053,15 @@ function showStageSelect(charKey){
   document.getElementById("over").classList.add("hidden");
   const list=document.getElementById("stagelist"); list.innerHTML="";
   for(const k in STAGES){ const S=STAGES[k]; const el=document.createElement("div"); el.className="card";
-    el.innerHTML=`<img class="stagethumb" src="sprites/bg/${S.img}.jpg?v=1" alt="">
+    el.innerHTML=`<canvas class="stagethumb" id="st_${k}" width="50" height="50"></canvas>
       <div><div class="nm">${S.emoji} ${S.name}</div><div class="ds">${S.desc}</div></div>`;
     el.onclick=()=>startGame(pendingChar,k);
     list.appendChild(el);
   }
   document.getElementById("stage").classList.remove("hidden");
+  for(const k in STAGES){ const S=STAGES[k], cvp=document.getElementById("st_"+k); if(!cvp)continue;
+    const g=cvp.getContext("2d"), tile=S._tile||makeTile(S); g.imageSmoothingEnabled=false;
+    g.drawImage(tile,0,0,tile.width,tile.width,0,0,50,50); }
 }
 
 /* ============================================================
@@ -1043,7 +1089,6 @@ function onSheetLoad(){ if(state==="title") drawPortraits(); }
 ["gwangmin_basic","akane_basic","kimchired","samonpink","minmin_basic","goldbear"].forEach(n=>{
   const im=new Image(); im.onload=onSheetLoad; im.src="sprites/sheets/"+n+".png?v=6"; SHEETS[n.replace("_basic","")]=im;
 });
-["city","lava","snow","forest"].forEach(n=>{ const im=new Image(); im.src="sprites/bg/"+n+".jpg?v=1"; BG[n]=im; });
 document.getElementById("howbtn").onclick=()=>alert("◆ 이동: 화면 아무 곳이나 드래그 (PC: WASD/방향키)\n◆ 공격: 자동\n◆ 적을 처치해 보석을 모아 레벨업 → 무기·능력 3개 중 1개 선택\n◆ 캐릭터마다 기본 무기 + 전용 스킬 보유\n◆ 3분 생존 시 변신! 능력이 크게 강화된다\n◆ 5분 생존 시 게이트 봉쇄 성공\n◆ 골드로 강화 상점에서 영구 강화 가능");
 refreshGoldLabels();
 const pb=document.getElementById("pausebtn");
