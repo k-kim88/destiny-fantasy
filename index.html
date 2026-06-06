@@ -220,7 +220,7 @@ const CHARS={
 // 4방향 스프라이트 시트 (4열=애니 프레임, 4행=정면/좌/우/후면)
 const SHEETS={};
 ["gwangmin_basic","akane_basic","kimchired","samonpink"].forEach(n=>{
-  const im=new Image(); im.src="sprites/sheets/"+n+".png?v=3"; SHEETS[n.replace("_basic","")]=im;
+  const im=new Image(); im.src="sprites/sheets/"+n+".png?v=4"; SHEETS[n.replace("_basic","")]=im;
 });
 const ROW_DOWN=0, ROW_LEFT=1, ROW_RIGHT=2, ROW_UP=3;
 function blitSheet(key, sx, sy, destH, col, row, alpha){
@@ -780,9 +780,9 @@ function drawPlayerSprite(px,py){
   const destH=player.morphed?56:50;
   // 그림자
   cx.fillStyle="rgba(0,0,0,.32)"; cx.beginPath(); cx.ellipse(px,py,destH*0.22,destH*0.085,0,0,TAU); cx.fill();
-  const col=player.moving?Math.floor(player.animT/130)%4:0;
+  const col=player.moving?Math.floor(player.animT/150)%4:0;
   const blink=player.invuln>0 && Math.floor(t/80)%2===0;
-  if(!blitSheet(key, px, py+6, destH, col, player.dir, blink?0.4:1)){
+  if(!blitSheet(key, px, py+2, destH, col, player.dir, blink?0.4:1)){
     (player.morphed?C.drawMorph:C.draw)(px,py);   // 이미지 미로드 시 벡터 폴백
   }
 }
