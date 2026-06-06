@@ -375,7 +375,9 @@ const STAGES={
   lava:{ id:"lava", name:"용암 지대", ja:"溶岩地帯", emoji:"🌋", desc:"붉게 타오르는 화산.", descja:"赤く燃える火山地帯。", img:"lava", coll:STAGE_COLL.lava, tint:"rgba(18,4,0,0.18)",
     pal:["#2a211d","#241b18","#322620","#1e1714","#2c221c"], dec:"lava", s:53 },
 };
-const BG={}, ART={};
+const BG={}, ART={}, MON={};
+const MON_SMALL=["a0","a1","a2","a3","a4","a5","a6","a7","a8","a9","c0","c1","c2","c3","c4","c5","c6","c7","c8"];
+const MON_BOSS=["b0","b1","b2","b3","b4","b5","b6","b7","b8","b9"];
 function imgReady(st){ const im=st&&BG[st.img]; return im&&im.complete&&im.naturalWidth>0; }
 function sName(st){ return (lang==="ja"&&st.ja)?st.ja:st.name; }
 function sDesc(st){ return (lang==="ja"&&st.descja)?st.descja:st.desc; }
@@ -590,7 +592,8 @@ function spawnEnemy(type){
   const ang=Math.random()*TAU, rad=Math.max(W,H)*0.62+40;
   const e={type,x:player.x+Math.cos(ang)*rad,y:player.y+Math.sin(ang)*rad,
     r:b.r,hp:b.hp*hpMul,maxhp:b.hp*hpMul,spd:b.spd,dmg:b.dmg,xp:b.xp,col:b.col,eye:b.eye,hit:0,dmgCd:0,ph:Math.random()*TAU};
-  if(type==="boss") e.variant=BOSS_VARIANTS[(Math.random()*BOSS_VARIANTS.length)|0];
+  if(type==="boss"){ e.variant=BOSS_VARIANTS[(Math.random()*BOSS_VARIANTS.length)|0]; e.spr=MON_BOSS[(Math.random()*MON_BOSS.length)|0]; }
+  else if(type!=="crate"&&type!=="stageboss"){ e.spr=MON_SMALL[(Math.random()*MON_SMALL.length)|0]; }
   enemies.push(e);
 }
 function solidAtWorld(wx,wy){ const st=stage; if(!st||!st.coll)return false; ensureColl(st); const C=st._coll;
@@ -1050,11 +1053,19 @@ function drawEnemy(e){
   cx.fillStyle="rgba(0,0,0,.35)"; cx.beginPath(); cx.ellipse(sx,sy+e.r*0.7,e.r*0.82,e.r*0.32,0,0,TAU); cx.fill();
   const bob=Math.sin(t*0.006+e.ph)*e.r*0.12;
   cx.save(); cx.translate(sx,sy+bob);
-  const dm={bat:drawBat,slug:drawSlug,hornet:drawHornet,wolf:drawWolf,ghost:drawGhost,knight:drawKnight,tank:drawTank,ogre:drawOgre,crate:drawCrate,boss:drawBoss,stageboss:drawStageBoss};
-  (dm[e.type]||drawDemon)(e);
-  if(hitw){ cx.globalAlpha=0.75; cx.fillStyle="#fff"; cx.beginPath(); cx.ellipse(0,-e.r*0.3,e.r*0.95,e.r*1.05,0,0,TAU); cx.fill(); cx.globalAlpha=1; }
+  const spr=e.spr&&MON[e.spr];
+  if(spr&&spr.complete&&spr.naturalWidth){
+    const hh=e.r*2.7, ww=spr.naturalWidth/spr.naturalHeight*hh, face=(player.x<e.x)?-1:1;
+    cx.save(); cx.scale(face,1); cx.imageSmoothingEnabled=false; cx.drawImage(spr,-ww/2,-hh,ww,hh);
+    if(hitw){ cx.globalAlpha=0.7; cx.globalCompositeOperation="source-atop"; cx.fillStyle="#fff"; cx.fillRect(-ww/2,-hh,ww,hh); cx.globalCompositeOperation="source-over"; cx.globalAlpha=1; }
+    cx.imageSmoothingEnabled=true; cx.restore();
+  } else {
+    const dm={bat:drawBat,slug:drawSlug,hornet:drawHornet,wolf:drawWolf,ghost:drawGhost,knight:drawKnight,tank:drawTank,ogre:drawOgre,crate:drawCrate,boss:drawBoss,stageboss:drawStageBoss};
+    (dm[e.type]||drawDemon)(e);
+    if(hitw){ cx.globalAlpha=0.75; cx.fillStyle="#fff"; cx.beginPath(); cx.ellipse(0,-e.r*0.3,e.r*0.95,e.r*1.05,0,0,TAU); cx.fill(); cx.globalAlpha=1; }
+  }
   cx.restore();
-  if(e.type==="boss"||e.type==="stageboss"){ const w=e.r*1.7; cx.fillStyle="#000a"; cx.fillRect(sx-w/2,sy-e.r*2-6,w,6); cx.fillStyle="#ff4d6d"; cx.fillRect(sx-w/2,sy-e.r*2-6,w*Math.max(0,e.hp/e.maxhp),6); }
+  if(e.type==="boss"||e.type==="stageboss"){ const w=e.r*1.9; cx.fillStyle="#000a"; cx.fillRect(sx-w/2,sy-e.r*2.7-8,w,6); cx.fillStyle="#ff4d6d"; cx.fillRect(sx-w/2,sy-e.r*2.7-8,w*Math.max(0,e.hp/e.maxhp),6); }
 }
 // ----- 16도트 픽셀 몬스터 (좌표 0,0 = 발 위치) -----
 function drawBat(e){ const f=Math.sin(t*0.02+e.ph); // 날갯짓
@@ -1727,10 +1738,11 @@ addEventListener("keyup",e=>{ const k=e.key.toLowerCase(); if(k==="arrowleft"||k
 // 에셋 로딩 (상태 초기화 이후)
 function onSheetLoad(){ if(state==="title") drawPortraits(); }
 ["gwangmin_basic","akane_basic","kimchired","samonpink","minmin_basic","goldbear"].forEach(n=>{
-  const im=new Image(); im.onload=onSheetLoad; im.src="sprites/sheets/"+n+".png?v=7"; SHEETS[n.replace("_basic","")]=im;
+  const im=new Image(); im.onload=onSheetLoad; im.src="sprites/sheets/"+n+".png?v=8"; SHEETS[n.replace("_basic","")]=im;
 });
 ["ruins","lava","snow","forest"].forEach(n=>{ const im=new Image(); im.src="sprites/bg/"+n+".jpg?v=3"; BG[n]=im; });
 ["cut_gwangmin","cut_akane","cut_minmin"].forEach(n=>{ const im=new Image(); im.src="sprites/art/"+n+".jpg?v=1"; ART[n]=im; });
+[...MON_SMALL,...MON_BOSS].forEach(k=>{ const im=new Image(); im.src="sprites/mon/"+k+".png?v=1"; MON[k]=im; });
 document.getElementById("howbtn").onclick=()=>alert(T("howtext"));
 if(muted){ const mb=document.getElementById("mutebtn"); if(mb)mb.textContent="🔇"; }
 applyLang(); refreshGoldLabels();
