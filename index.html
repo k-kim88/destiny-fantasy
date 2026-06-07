@@ -731,18 +731,19 @@ function updateOrbs(dt){
   if(L>0){ const radius=(58+L*7)*area(), dmg=(8+L*5)*might()*(L>=10?1.4:1), speed=0.0026+L*0.0002;
     for(const o of orbs){ o.a=(o.a+speed*dt)%TAU; o.x=player.x+Math.cos(o.a)*radius; o.y=player.y+Math.sin(o.a)*radius;
       for(const e of enemies){ const last=o.hitcd.get(e)||0; if(t-last>420 && dist2(o.x,o.y,e.x,e.y)<(e.r+11)**2){ hurtEnemy(e,dmg); o.hitcd.set(e,t); knock(e,o.x,o.y,3);} } } }
-  const D=wlv("dogs"); // 보네와레몬: 맵을 뛰어다니며 적을 사냥하는 강아지 두 마리
-  if(D>0){ const evo=D>=10, dmg=(12+D*6)*might()*(evo?1.5:1), spd=((2.6+D*0.13)*(evo?1.4:1))*dt/16, hitr=evo?20:16;
+  const D=wlv("dogs"); // 보네와레몬: 각자 화면 안을 자유롭게 랜덤 배회하며 닿는 적을 공격
+  if(D>0){ const evo=D>=10, dmg=(12+D*6)*might()*(evo?1.5:1), spd=((2.2+D*0.11)*(evo?1.35:1))*dt/16, hitr=evo?18:15;
+    const mx=W/2, my=H/2, inx=30, iny=40;
     for(const o of dogsArr){
-      let tgt=o.target; if(!tgt||tgt.dead||tgt.type==="crate"||dist2(o.x,o.y,tgt.x,tgt.y)>440*440){ tgt=null; let bd=1e18;
-        for(const e of enemies){ if(e.dead||e.type==="crate")continue; const d=dist2(o.x,o.y,e.x,e.y); if(d<bd){bd=d;tgt=e;} } o.target=tgt; }
-      let mvx=0,mvy=0;
-      if(tgt){ const a=Math.atan2(tgt.y-o.y,tgt.x-o.x); mvx=Math.cos(a); mvy=Math.sin(a); o.x+=mvx*spd; o.y+=mvy*spd;
-        const last=o.hitcd.get(tgt)||0; if(t-last>300 && dist2(o.x,o.y,tgt.x,tgt.y)<(tgt.r+hitr)**2){ hurtEnemy(tgt,dmg); o.hitcd.set(tgt,t); knock(tgt,o.x,o.y,6); sfx("bark"); } }
-      else { const dx=player.x-o.x, dy=player.y-o.y, dp=Math.hypot(dx,dy)||1; // 적 없으면 주인 곁으로
-        if(dp>110){ mvx=dx/dp; mvy=dy/dp; o.x+=mvx*spd*0.85; o.y+=mvy*spd*0.85; }
-        else { o.a=(o.a||0)+0.04*dt/16; mvx=Math.cos(o.a); mvy=Math.sin(o.a); o.x+=mvx*0.7; o.y+=mvy*0.7; } }
-      if(Math.abs(mvx)>0.02) o.face=mvx<0?-1:1; o.animT=(o.animT||0)+dt; o.ang=0;
+      if(o.vx==null){ const a=Math.random()*TAU; o.vx=Math.cos(a); o.vy=Math.sin(a); o.wcd=300+Math.random()*500; }
+      if((o.wcd-=dt)<=0){ const a=Math.atan2(o.vy,o.vx)+rand(-0.9,0.9); o.vx=Math.cos(a); o.vy=Math.sin(a); o.wcd=300+Math.random()*600; } // 가끔 방향 전환
+      o.x+=o.vx*spd; o.y+=o.vy*spd;
+      // 현재 보이는 화면 영역 가장자리에서 반사
+      if(o.x<cam.x-mx+inx&&o.vx<0)o.vx=Math.abs(o.vx); if(o.x>cam.x+mx-inx&&o.vx>0)o.vx=-Math.abs(o.vx);
+      if(o.y<cam.y-my+iny&&o.vy<0)o.vy=Math.abs(o.vy); if(o.y>cam.y+my-iny&&o.vy>0)o.vy=-Math.abs(o.vy);
+      o.x=clamp(o.x,cam.x-mx+inx,cam.x+mx-inx); o.y=clamp(o.y,cam.y-my+iny,cam.y+my-iny); // 화면 밖이면 안으로
+      for(const e of enemies){ if(e.dead||e.type==="crate")continue; const last=o.hitcd.get(e)||0; if(t-last>300 && dist2(o.x,o.y,e.x,e.y)<(e.r+hitr)**2){ hurtEnemy(e,dmg); o.hitcd.set(e,t); knock(e,o.x,o.y,5); sfx("bark"); } }
+      if(Math.abs(o.vx)>0.02) o.face=o.vx<0?-1:1; o.animT=(o.animT||0)+dt; o.ang=0;
     } }
 }
 
@@ -957,7 +958,7 @@ const WDESC={
   blade:{ko:"에너지 칼날을 휘둘러 베어낸다",ja:"エネルギーの刃で薙ぎ払う"},
   drone:{ko:"수호 드론이 주위를 돌며 타격",ja:"守護ドローンが周囲を旋回し攻撃"},
   aura:{ko:"몸 주위에 지속 피해 오라",ja:"周囲に持続ダメージのオーラ"},
-  dogs:{ko:"강아지 보네·레몬이 맵을 뛰어다니며 적을 사냥",ja:"子犬ボネ・レモンがマップを駆け回り敵を狩る"},
+  dogs:{ko:"강아지 보네·레몬이 화면을 자유롭게 뛰어다니며 닿는 적을 공격",ja:"子犬ボネ・レモンが画面を自由に駆け回り触れた敵を攻撃"},
   bolt:{ko:"범위 내 적에게 무작위 벼락",ja:"範囲内の敵にランダム落雷"},
   frost:{ko:"가까운 적에게 서리 파편 + 둔화",ja:"近い敵へ氷の礫 + 鈍化"},
 };
