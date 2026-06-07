@@ -522,6 +522,8 @@ let player, cam, enemies, gems, shots, orbs, fx, dmgtexts, stage, chests, pickup
 let elapsed=0, kills=0, spawnAcc=0, bossTimer=0, crateTimer=0, stageBossSpawned=false, won=false;
 let warnT=0, warnText="", clearT=0;
 let mecha=null, kaiju=null, introT=0, mPow=10, mechaFlash=0;
+const MECH={}; // 합체 로봇 포즈 스프라이트 (fx = 발 중심 x 비율)
+const MECH_META={idle:{fx:0.527},guard:{fx:0.512},kick:{fx:0.440},gun:{fx:0.355},punch:{fx:0.524},special:{fx:0.204}};
 const mInput={left:false,right:false,guard:false,punch:false,kick:false,special:false};
 let shakeT=0, shakeMag=0;
 function addShake(m,d){ shakeMag=Math.max(shakeMag,m); shakeT=Math.max(shakeT,d); }
@@ -1535,7 +1537,7 @@ function startMecha(){
   const gy=H*0.82; mPow=9+player.stats.might*7+player.level*0.6;
   mecha={x:W*0.30,y:gy,face:1,maxhp:Math.round(300+player.maxhp*0.5),atkCd:0,action:"",actionT:0,guard:false,sp:0,hurtT:0};
   mecha.hp=mecha.maxhp;
-  kaiju={x:W*0.74,y:gy,face:-1,maxhp:Math.round(1100+player.level*55),atkCd:1800,action:"",actionT:0,hurtT:0,tele:0,beam:false};
+  kaiju={x:W*0.74,y:gy,face:-1,maxhp:Math.round(1100+player.level*55),atkCd:1800,action:"",actionT:0,hurtT:0,tele:0,beam:false,spr:MON_BOSS[(Math.random()*MON_BOSS.length)|0]};
   kaiju.hp=kaiju.maxhp;
   introT=1900; mechaFlash=0; warn(lang==="ja"?"W A R N I N G":"W A R N I N G"); sfx("morph"); addShake(9,500);
   for(const k in mInput) mInput[k]=false;
@@ -1567,7 +1569,23 @@ function updateMecha(dt){ t+=dt;
   if(mecha.hp<=0){ document.getElementById("mechactrl").classList.add("hidden"); lose(); }
   else if(kaiju.hp<=0){ document.getElementById("mechactrl").classList.add("hidden"); startClear(); }
 }
-function drawKaiju(k){ const gy=k.y, gl=0.6+Math.sin(t*0.01)*0.4, sh=k.hurtT>0&&Math.floor(t/40)%2===0;
+function drawKaiju(k){ const gy=k.y, sh=k.hurtT>0&&Math.floor(t/40)%2===0;
+  const wind0=(k.action==="windup"||k.action==="windbeam")?Math.min(1,1-(k.actionT/600)):0;
+  const img=k.spr&&MON[k.spr];
+  if(img&&img.complete&&img.naturalWidth){
+    const dh=216+wind0*10, dw=img.naturalWidth/img.naturalHeight*dh, shx=wind0>0?Math.sin(t*0.05)*4*wind0:0;
+    cx.save(); cx.translate(k.x+shx,gy); cx.scale(k.face,1);
+    cx.fillStyle="rgba(0,0,0,.4)"; cx.beginPath(); cx.ellipse(0,0,dw*0.30,14,0,0,TAU); cx.fill();
+    cx.imageSmoothingEnabled=false; cx.drawImage(img,-dw/2,-dh,dw,dh);
+    if(sh){ cx.globalAlpha=0.65; cx.globalCompositeOperation="source-atop"; cx.fillStyle="#fff"; cx.fillRect(-dw/2,-dh,dw,dh); cx.globalCompositeOperation="source-over"; cx.globalAlpha=1; }
+    else if(wind0>0.25){ cx.globalAlpha=wind0*0.5; cx.globalCompositeOperation="source-atop"; cx.fillStyle="#ff5a2a"; cx.fillRect(-dw/2,-dh,dw,dh); cx.globalCompositeOperation="source-over"; cx.globalAlpha=1; }
+    cx.imageSmoothingEnabled=true; cx.restore();
+    if(k.action==="beam"){ cx.save(); cx.globalAlpha=0.85; cx.fillStyle="#ff7a2a"; cx.shadowColor="#ff3b2a"; cx.shadowBlur=20; const by=gy-130; cx.fillRect(0,by-12,k.x-20,24); cx.fillStyle="#fff4c0"; cx.fillRect(0,by-5,k.x-20,10); cx.restore(); cx.globalAlpha=1; }
+    return;
+  }
+  drawKaijuVec(k);
+}
+function drawKaijuVec(k){ const gy=k.y, gl=0.6+Math.sin(t*0.01)*0.4, sh=k.hurtT>0&&Math.floor(t/40)%2===0;
   cx.save(); cx.translate(k.x,gy); cx.scale(k.face,1);
   const wind=(k.action==="windup"||k.action==="windbeam")?Math.min(1,1-(k.actionT/600)):0, strike=(k.action==="hit"||k.action==="beam")?1:0;
   const body=sh?"#fff":"#3a2b1e", body2=sh?"#fff":"#4a3826", claw=sh?"#fff":"#2a1f14";
@@ -1584,7 +1602,21 @@ function drawKaiju(k){ const gy=k.y, gl=0.6+Math.sin(t*0.01)*0.4, sh=k.hurtT>0&&
   cx.restore();
   if(k.action==="beam"){ cx.save(); cx.globalAlpha=0.85; cx.fillStyle="#ff7a2a"; cx.shadowColor="#ff3b2a"; cx.shadowBlur=20; const by=gy-160; cx.fillRect(0,by-12,k.x-20,24); cx.fillStyle="#fff4c0"; cx.fillRect(0,by-5,k.x-20,10); cx.restore(); cx.globalAlpha=1; }
 }
-function drawMecha(m){ const col=CHARS[player.char].swatch, gy=m.y, sh=m.hurtT>0&&Math.floor(t/50)%2===0;
+function drawMecha(m){ const gy=m.y, sh=m.hurtT>0&&Math.floor(t/50)%2===0;
+  const pose=m.action==="special"?"special":(m.action==="punch"?"punch":m.action==="kick"?"kick":m.guard?"guard":"idle");
+  const img=MECH[pose];
+  if(img&&img.complete&&img.naturalWidth){
+    const meta=MECH_META[pose]||MECH_META.idle, dh=172, dw=img.naturalWidth/img.naturalHeight*dh, fx=meta.fx*dw;
+    cx.save(); cx.translate(m.x,gy); cx.scale(m.face,1);
+    cx.fillStyle="rgba(0,0,0,.45)"; cx.beginPath(); cx.ellipse(0,0,40,11,0,0,TAU); cx.fill();
+    cx.imageSmoothingEnabled=false; cx.drawImage(img,-fx,-dh,dw,dh);
+    if(sh){ cx.globalAlpha=0.55; cx.globalCompositeOperation="source-atop"; cx.fillStyle="#fff"; cx.fillRect(-fx,-dh,dw,dh); cx.globalCompositeOperation="source-over"; cx.globalAlpha=1; }
+    cx.imageSmoothingEnabled=true; cx.restore();
+    return;
+  }
+  drawMechaVec(m);
+}
+function drawMechaVec(m){ const col=CHARS[player.char].swatch, gy=m.y, sh=m.hurtT>0&&Math.floor(t/50)%2===0;
   cx.save(); cx.translate(m.x,gy); cx.scale(m.face,1);
   const punch=m.action==="punch"?1:0, kick=m.action==="kick"?1:0, sptl=m.action==="special"?1:0;
   const main=sh?"#fff":col, steel="#cfd6e2", dark="#2a3140";
@@ -1742,7 +1774,8 @@ function onSheetLoad(){ if(state==="title") drawPortraits(); }
 });
 ["ruins","lava","snow","forest"].forEach(n=>{ const im=new Image(); im.src="sprites/bg/"+n+".jpg?v=3"; BG[n]=im; });
 ["cut_gwangmin","cut_akane","cut_minmin"].forEach(n=>{ const im=new Image(); im.src="sprites/art/"+n+".jpg?v=1"; ART[n]=im; });
-[...MON_SMALL,...MON_BOSS].forEach(k=>{ const im=new Image(); im.src="sprites/mon/"+k+".png?v=1"; MON[k]=im; });
+[...MON_SMALL,...MON_BOSS].forEach(k=>{ const im=new Image(); im.src="sprites/mon/"+k+".png?v=2"; MON[k]=im; });
+["idle","guard","kick","gun","punch","special"].forEach(k=>{ const im=new Image(); im.src="sprites/mech/"+k+".png?v=1"; MECH[k]=im; });
 document.getElementById("howbtn").onclick=()=>alert(T("howtext"));
 if(muted){ const mb=document.getElementById("mutebtn"); if(mb)mb.textContent="🔇"; }
 applyLang(); refreshGoldLabels();
