@@ -142,6 +142,7 @@
   <img id="heroimg" src="sprites/art/heroes.jpg?v=1" alt="">
   <div id="titlegold">💰 0</div>
   <button class="btn" id="startbtn">전대 소집</button>
+  <button class="btn sec" id="practicebtn">🤖 로봇대전 모드</button>
   <button class="btn sec" id="shopbtn">강화 상점</button>
   <button class="btn sec" id="howbtn">조작법</button>
   <div class="credit" id="creditline">v6.0 — 타베모노 센타이</div>
@@ -195,6 +196,7 @@
     <div class="stat">처치 <b id="ov_kill" style="color:#ff9a8a">0</b> · 레벨 <b id="ov_lv" style="color:var(--gold)">1</b></div>
     <div class="stat" id="ov_gold" style="color:var(--gold);font-weight:800;margin-top:8px">💰 +0</div>
   </div>
+  <button class="btn" id="retrymecha" style="background:linear-gradient(180deg,#ff7ad0,#c93f9a);border-color:#ff7ad0">🤖 로봇대전부터</button>
   <button class="btn" id="retrybtn">다시 도전</button>
   <button class="btn sec" id="tohome">캐릭터 다시 선택</button>
 </div>
@@ -325,7 +327,7 @@ const UI={
    stT:"전장 선택",stS:"게이트가 열린 장소를 선택하라.",back:"← 뒤로",stback:"← 캐릭터 다시",
    lvT:"⚔ 레벨 업! 보상을 선택하라",rlT:"🎰 보스 격파! 전리품 룰렛",get:"획득",
    shopT:"강화 상점",shopS:"획득한 골드로 전대원을 영구 강화한다.<br>모든 캐릭터에 적용된다.",
-   home:"캐릭터 다시 선택",retry:"다시 도전",retryW:"다시 플레이",
+   home:"캐릭터 다시 선택",retry:"다시 도전",retryW:"다시 플레이",practice:"🤖 로봇대전 모드",retryMecha:"🤖 로봇대전부터",
    story:`어느 날 현실에 <b style="color:#c79bff">게이트</b>가 열리고,<br>이세계의 <b style="color:#ff8a8a">마물</b>이 쏟아져 나왔다.<br>미지의 힘에 눈뜬 <b>전대</b>가 맞선다.<br><br>5분을 버텨 <b style="color:#ff7ab0">변신</b>, 20분의 보스를 처치하라!`,
    howtext:"◆ 이동: 화면 드래그 (PC: WASD/방향키)\n◆ 공격: 자동\n◆ 적 처치→보석→레벨업(3택)\n◆ 무기는 Lv10에서 진화\n◆ 5분 변신 / 20분 스테이지 보스 처치=클리어\n◆ 나무상자: 회복/골드"},
  ja:{logosub:"食べ物戦隊",logomain:"ウマインジャー",start:"戦隊招集",shop:"強化ショップ",how:"操作方法",credit:"v6.0 — 食べ物戦隊",
@@ -333,7 +335,7 @@ const UI={
    stT:"戦場選択",stS:"ゲートが開いた場所を選べ。",back:"← 戻る",stback:"← キャラ選択",
    lvT:"⚔ レベルアップ！報酬を選べ",rlT:"🎰 ボス撃破！戦利品ルーレット",get:"獲得",
    shopT:"強化ショップ",shopS:"獲得したゴールドで戦隊員を永久強化。<br>全キャラに適用。",
-   home:"キャラ選び直し",retry:"再挑戦",retryW:"もう一度",
+   home:"キャラ選び直し",retry:"再挑戦",retryW:"もう一度",practice:"🤖 ロボ大戦モード",retryMecha:"🤖 ロボ大戦から",
    story:`ある日、現実に<b style="color:#c79bff">ゲート</b>が開き、<br>異世界の<b style="color:#ff8a8a">魔物</b>が溢れ出した。<br>力に目覚めた<b>戦隊</b>が立ち向かう。<br><br>5分耐えて<b style="color:#ff7ab0">変身</b>、20分のボスを倒せ！`,
    howtext:"◆ 移動: 画面ドラッグ (PC: WASD/矢印)\n◆ 攻撃: 自動\n◆ 敵→宝石→レベルUP(3択)\n◆ 武器はLv10で進化\n◆ 5分で変身 / 20分のステージボス撃破=クリア\n◆ 木箱: 回復/ゴールド"},
 };
@@ -342,7 +344,7 @@ function setTxt(id,s){ const e=document.getElementById(id); if(e)e.textContent=s
 function setHTML(id,s){ const e=document.getElementById(id); if(e)e.innerHTML=s; }
 function applyLang(){
   setTxt("logosub",T("logosub")); setTxt("logomain",T("logomain"));
-  setTxt("startbtn",T("start")); setTxt("shopbtn",T("shop")); setTxt("howbtn",T("how")); setTxt("creditline",T("credit"));
+  setTxt("startbtn",T("start")); setTxt("practicebtn",T("practice")); setTxt("shopbtn",T("shop")); setTxt("howbtn",T("how")); setTxt("creditline",T("credit"));
   setTxt("selT",T("selT")); setHTML("selS",T("selS")); setTxt("stT",T("stT")); setHTML("stS",T("stS"));
   setTxt("backbtn",T("back")); setTxt("stageback",T("stback")); setTxt("shopback",T("back"));
   setTxt("shopT",T("shopT")); setHTML("shopS",T("shopS")); setTxt("tohome",T("home"));
@@ -554,7 +556,7 @@ let state="title", t=0, lastTs=0;
 let player, cam, enemies, gems, shots, orbs, fx, dmgtexts, stage, chests, pickups;
 let elapsed=0, kills=0, spawnAcc=0, bossTimer=0, crateTimer=0, stageBossSpawned=false, won=false;
 let warnT=0, warnText="", clearT=0;
-let mecha=null, kaiju=null, introT=0, mPow=10, mechaFlash=0;
+let mecha=null, kaiju=null, introT=0, mPow=10, mechaFlash=0, practiceMode=false, mechaRetry=false;
 const MECH={}; // 합체 로봇 포즈 스프라이트 (fx = 발 중심 x 비율)
 const MECH_META={idle:{fx:0.527},guard:{fx:0.512},kick:{fx:0.440},gun:{fx:0.355},punch:{fx:0.524},special:{fx:0.204}};
 const mInput={left:false,right:false,guard:false,punch:false,kick:false,special:false};
@@ -583,7 +585,7 @@ function startGame(charKey, stageKey){
   player=newPlayer(charKey);
   const sp=spawnPoint(stage); player.x=sp.x; player.y=sp.y; cam={x:sp.x,y:sp.y};
   enemies=[]; gems=[]; shots=[]; orbs=[]; fx=[]; dmgtexts=[]; chests=[]; pickups=[];
-  elapsed=0; kills=0; spawnAcc=0; bossTimer=0; crateTimer=0; stageBossSpawned=false; won=false; warnT=0; clearT=0; mecha=null; kaiju=null; introT=0; mechaFlash=0;
+  elapsed=0; kills=0; spawnAcc=0; bossTimer=0; crateTimer=0; stageBossSpawned=false; won=false; warnT=0; clearT=0; mecha=null; kaiju=null; introT=0; mechaFlash=0; mechaRetry=false;
   document.getElementById("mechactrl").classList.add("hidden");
   rebuildOrbs(); state="play";
   ["title","select","stage","over","levelup","shop"].forEach(id=>document.getElementById(id).classList.add("hidden"));
@@ -914,7 +916,7 @@ function damagePlayer(d){
       for(const e of enemies){ if(dist2(player.x,player.y,e.x,e.y)<260*260) knock(e,player.x,player.y,60); }
       fx.push({kind:"boom",x:player.x,y:player.y,r:200,t:0,dur:520}); fx.push({kind:"morphflash",x:player.x,y:player.y,t:0,dur:600});
       flash("💖 부활!"); return; }
-    player.hp=0; lose();
+    player.hp=0; mechaRetry=false; lose();
   }
 }
 function gainXP(v){ player.xp+=v*player.stats.growth;
@@ -1605,7 +1607,7 @@ function updateMecha(dt){ t+=dt;
       else { kaiju.tele=500; kaiju.action="windup"; kaiju.actionT=500; } }
   }
   kaiju.x=clamp(kaiju.x,mecha.x+MINGAP,W*0.9);
-  if(mecha.hp<=0){ document.getElementById("mechactrl").classList.add("hidden"); lose(); }
+  if(mecha.hp<=0){ document.getElementById("mechactrl").classList.add("hidden"); mechaRetry=true; lose(); }
   else if(kaiju.hp<=0){ document.getElementById("mechactrl").classList.add("hidden"); startClear(); }
 }
 function drawKaiju(k){ const gy=k.y, sh=k.hurtT>0&&Math.floor(t/40)%2===0;
@@ -1740,9 +1742,19 @@ function showOver(goldEarned){
   document.getElementById("ov_time").textContent=fmtTime(elapsed);
   document.getElementById("ov_kill").textContent=kills; document.getElementById("ov_lv").textContent=player.level;
   document.getElementById("ov_gold").textContent="💰 +"+goldEarned+"  (보유 "+meta.gold+")";
-  document.getElementById("retrybtn").textContent=(won?"다시 플레이":"다시 도전");
+  document.getElementById("retrybtn").textContent=(won?T("retryW"):T("retry"));
+  const rm=document.getElementById("retrymecha"); rm.textContent=T("retryMecha"); rm.classList.toggle("hidden", !(mechaRetry&&!won));
   document.getElementById("hud").classList.add("hidden");
   document.getElementById("over").classList.remove("hidden");
+}
+// 로봇대전 단독 모드 (타이틀 → 캐릭터 선택 → 바로 로봇대전)
+function startMechaPractice(charKey){
+  practiceMode=false; player=newPlayer(charKey);
+  player.level=15; player.morphed=true; player.stats.might+=2.2; player.maxhp+=120; player.hp=player.maxhp;
+  stage=STAGES.ruins; lastStageKey="ruins";
+  enemies=[]; gems=[]; shots=[]; orbs=[]; fx=[]; dmgtexts=[]; chests=[]; pickups=[]; won=false; mechaRetry=false;
+  ["title","select","stage","over","levelup","shop"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+  startMecha();
 }
 
 /* ---------- 상점 (메타 강화) ---------- */
@@ -1782,7 +1794,7 @@ function showSelect(){
       <div class="tags"><span class="tag">${WEAPONS[C.base].icon} ${LN(WEAPONS[C.base])}</span>
       <span class="tag">${WEAPONS[C.signature].icon} ${LN(WEAPONS[C.signature])}</span>
       <span class="tag" style="color:${C.swatch}">⚡ ${chMorph(C)}</span></div></div>`;
-      el.onclick=()=>showStageSelect(k); }
+      el.onclick=()=> practiceMode? startMechaPractice(k) : showStageSelect(k); }
     list.appendChild(el);
   }
   document.getElementById("select").classList.remove("hidden");
@@ -1816,8 +1828,10 @@ function loop(ts){ const dt=Math.min(40,ts-lastTs||16); lastTs=ts;
   requestAnimationFrame(loop); }
 requestAnimationFrame(loop);
 
-function goHome(){ ["select","stage","over","shop","levelup","hud","mechactrl"].forEach(id=>document.getElementById(id).classList.add("hidden")); document.getElementById("title").classList.remove("hidden"); state="title"; refreshGoldLabels(); }
-document.getElementById("startbtn").onclick=()=>{ audioInit(); showSelect(); };
+function goHome(){ practiceMode=false; ["select","stage","over","shop","levelup","hud","mechactrl"].forEach(id=>document.getElementById(id).classList.add("hidden")); document.getElementById("title").classList.remove("hidden"); state="title"; refreshGoldLabels(); }
+document.getElementById("startbtn").onclick=()=>{ audioInit(); practiceMode=false; showSelect(); };
+document.getElementById("practicebtn").onclick=()=>{ audioInit(); practiceMode=true; showSelect(); };
+document.getElementById("retrymecha").onclick=()=>{ document.getElementById("over").classList.add("hidden"); if(player) startMecha(); };
 document.getElementById("langbtn").onclick=toggleLang;
 document.getElementById("mutebtn").onclick=()=>{ audioInit(); toggleMute(); };
 document.getElementById("backbtn").onclick=goHome;
