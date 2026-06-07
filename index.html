@@ -415,6 +415,7 @@ const MON_SMALL=["a0","a1","a2","a3","a4","a5","a6","a7","a8","a9","c0","c1","c2
 const MON_BOSS=["b0","b1","b2","b3","b4","b5","b6","b7","b8","b9"];
 // 스프라이트 원본이 바라보는 방향(1=오른쪽, -1=왼쪽; 정면형은 1). 좌우 반전 보정용
 const MON_FACE={a3:-1,a8:-1,b2:-1,b6:-1,b7:-1,c4:-1};
+const DOGIMG=new Image(); const DOG_CW=251, DOG_CH=348; // 보네와레몬 스프라이트 시트(4프레임×2마리)
 function imgReady(st){ const im=st&&BG[st.img]; return im&&im.complete&&im.naturalWidth>0; }
 function sName(st){ return (lang==="ja"&&st.ja)?st.ja:st.name; }
 function sDesc(st){ return (lang==="ja"&&st.descja)?st.descja:st.desc; }
@@ -724,16 +725,25 @@ function tickWeapons(dt){
 
 let dogsArr=[];
 function rebuildOrbs(){ orbs.length=0; const L=wlv("drone"); if(L>0){ const n=2+Math.floor(L*0.8); for(let i=0;i<n;i++) orbs.push({a:i/n*TAU,hitcd:new Map()}); }
-  dogsArr.length=0; const D=wlv("dogs"); if(D>0){ const n=2+Math.floor(D/3); for(let i=0;i<n;i++) dogsArr.push({a:i/n*TAU,hitcd:new Map(),dog:i%2}); } }
+  dogsArr.length=0; const D=wlv("dogs"); if(D>0){ const n=2+Math.floor(D/3); for(let i=0;i<n;i++) dogsArr.push({a:i/n*TAU,hitcd:new Map(),dog:i%2,x:player?player.x+Math.cos(i/n*TAU)*40:0,y:player?player.y+Math.sin(i/n*TAU)*40:0,face:1,animT:Math.random()*400,target:null}); } }
 function updateOrbs(dt){
   const L=wlv("drone");
   if(L>0){ const radius=(58+L*7)*area(), dmg=(8+L*5)*might()*(L>=10?1.4:1), speed=0.0026+L*0.0002;
     for(const o of orbs){ o.a=(o.a+speed*dt)%TAU; o.x=player.x+Math.cos(o.a)*radius; o.y=player.y+Math.sin(o.a)*radius;
       for(const e of enemies){ const last=o.hitcd.get(e)||0; if(t-last>420 && dist2(o.x,o.y,e.x,e.y)<(e.r+11)**2){ hurtEnemy(e,dmg); o.hitcd.set(e,t); knock(e,o.x,o.y,3);} } } }
-  const D=wlv("dogs"); // 보네와레몬: 강아지 두 마리가 원을 그리며 비행
-  if(D>0){ const evo=D>=10, radius=(70+D*8)*area(), dmg=(12+D*6)*might()*(evo?1.4:1), speed=(0.004+D*0.0003)*(evo?1.4:1);
-    for(const o of dogsArr){ o.a=(o.a+speed*dt)%TAU; o.x=player.x+Math.cos(o.a)*radius; o.y=player.y+Math.sin(o.a)*radius; o.ang=o.a+Math.PI/2;
-      for(const e of enemies){ const last=o.hitcd.get(e)||0; if(t-last>360 && dist2(o.x,o.y,e.x,e.y)<(e.r+13)**2){ hurtEnemy(e,dmg); o.hitcd.set(e,t); knock(e,o.x,o.y,5);} } } }
+  const D=wlv("dogs"); // 보네와레몬: 맵을 뛰어다니며 적을 사냥하는 강아지 두 마리
+  if(D>0){ const evo=D>=10, dmg=(12+D*6)*might()*(evo?1.5:1), spd=((2.6+D*0.13)*(evo?1.4:1))*dt/16, hitr=evo?20:16;
+    for(const o of dogsArr){
+      let tgt=o.target; if(!tgt||tgt.dead||tgt.type==="crate"||dist2(o.x,o.y,tgt.x,tgt.y)>440*440){ tgt=null; let bd=1e18;
+        for(const e of enemies){ if(e.dead||e.type==="crate")continue; const d=dist2(o.x,o.y,e.x,e.y); if(d<bd){bd=d;tgt=e;} } o.target=tgt; }
+      let mvx=0,mvy=0;
+      if(tgt){ const a=Math.atan2(tgt.y-o.y,tgt.x-o.x); mvx=Math.cos(a); mvy=Math.sin(a); o.x+=mvx*spd; o.y+=mvy*spd;
+        const last=o.hitcd.get(tgt)||0; if(t-last>300 && dist2(o.x,o.y,tgt.x,tgt.y)<(tgt.r+hitr)**2){ hurtEnemy(tgt,dmg); o.hitcd.set(tgt,t); knock(tgt,o.x,o.y,6); sfx("bark"); } }
+      else { const dx=player.x-o.x, dy=player.y-o.y, dp=Math.hypot(dx,dy)||1; // 적 없으면 주인 곁으로
+        if(dp>110){ mvx=dx/dp; mvy=dy/dp; o.x+=mvx*spd*0.85; o.y+=mvy*spd*0.85; }
+        else { o.a=(o.a||0)+0.04*dt/16; mvx=Math.cos(o.a); mvy=Math.sin(o.a); o.x+=mvx*0.7; o.y+=mvy*0.7; } }
+      if(Math.abs(mvx)>0.02) o.face=mvx<0?-1:1; o.animT=(o.animT||0)+dt; o.ang=0;
+    } }
 }
 
 /* ============================================================
@@ -947,7 +957,7 @@ const WDESC={
   blade:{ko:"에너지 칼날을 휘둘러 베어낸다",ja:"エネルギーの刃で薙ぎ払う"},
   drone:{ko:"수호 드론이 주위를 돌며 타격",ja:"守護ドローンが周囲を旋回し攻撃"},
   aura:{ko:"몸 주위에 지속 피해 오라",ja:"周囲に持続ダメージのオーラ"},
-  dogs:{ko:"강아지 보네·레몬이 원을 그리며 비행 공격",ja:"子犬ボネ・レモンが円を描いて飛び攻撃"},
+  dogs:{ko:"강아지 보네·레몬이 맵을 뛰어다니며 적을 사냥",ja:"子犬ボネ・レモンがマップを駆け回り敵を狩る"},
   bolt:{ko:"범위 내 적에게 무작위 벼락",ja:"範囲内の敵にランダム落雷"},
   frost:{ko:"가까운 적에게 서리 파편 + 둔화",ja:"近い敵へ氷の礫 + 鈍化"},
 };
@@ -1341,10 +1351,18 @@ function drawDog(sx,sy,ang,bone){ cx.save(); cx.translate(sx,sy); cx.rotate(ang|
   cx.shadowBlur=0; cx.fillStyle=det; cx.fillRect(10,-3,2,2);                            // 코/눈
   cx.fillStyle="#222"; cx.fillRect(9,-4,1.4,1.4);
   cx.restore(); }
-function drawDogs(){ const D=wlv("dogs"); if(D<=0)return; const evo=D>=10; for(const o of dogsArr){ if(o.x==null)continue; const [sx,sy]=w2s(o.x,o.y);
-  if(evo){ cx.save(); cx.globalAlpha=0.5; cx.shadowColor=o.dog?"#fff":"#ffd84a"; cx.shadowBlur=16; cx.fillStyle=o.dog?"#dff":"#fff2b0"; cx.beginPath(); cx.arc(sx,sy,11,0,TAU); cx.fill(); cx.restore(); } // 진화 오라
-  cx.globalAlpha=0.25; cx.fillStyle=o.dog?"#ffd84a":"#fff"; cx.beginPath(); cx.arc(sx-Math.cos(o.ang)*7,sy-Math.sin(o.ang)*7,evo?7:5,0,TAU); cx.fill(); cx.globalAlpha=1;
-  drawDog(sx,sy,o.ang,o.dog===0); } }
+function drawDogs(){ const D=wlv("dogs"); if(D<=0)return; const evo=D>=10;
+  const ready=DOGIMG&&DOGIMG.complete&&DOGIMG.naturalWidth;
+  for(const o of dogsArr){ if(o.x==null)continue; const [sx,sy]=w2s(o.x,o.y);
+    if(sx<-50||sx>W+50||sy<-50||sy>H+60)continue;
+    cx.fillStyle="rgba(0,0,0,.3)"; cx.beginPath(); cx.ellipse(sx,sy+13,11,4,0,0,TAU); cx.fill(); // 그림자
+    if(evo){ cx.save(); cx.globalAlpha=0.55; cx.shadowColor=o.dog?"#ffd84a":"#bfe8ff"; cx.shadowBlur=14; cx.fillStyle=o.dog?"#fff2b0":"#dff"; cx.beginPath(); cx.arc(sx,sy,13,0,TAU); cx.fill(); cx.restore(); }
+    if(ready){ const fr=Math.floor((o.animT||0)/110)%4, row=o.dog?1:0, dh=evo?44:38, dw=DOG_CW/DOG_CH*dh;
+      cx.save(); cx.translate(sx,sy); cx.scale(o.face||1,1); cx.imageSmoothingEnabled=false;
+      cx.drawImage(DOGIMG, fr*DOG_CW, row*DOG_CH, DOG_CW, DOG_CH, -dw/2, -dh+8, dw, dh);
+      cx.imageSmoothingEnabled=true; cx.restore();
+    } else drawDog(sx,sy,0,o.dog===0);
+  } }
 // 스테이지 보스 = 마룡(드래곤)
 function drawStageBossRaw(e){ const r=e.r, gl=0.6+Math.sin(t*0.01)*0.4, wf=Math.sin(t*0.004);
   // 박쥐형 날개
@@ -1869,6 +1887,7 @@ function onSheetLoad(){ if(state==="title") drawPortraits(); }
 ["ruins","lava","snow","forest"].forEach(n=>{ const im=new Image(); im.src="sprites/bg/"+n+".jpg?v=3"; BG[n]=im; });
 ["cut_gwangmin","cut_akane","cut_minmin"].forEach(n=>{ const im=new Image(); im.src="sprites/art/"+n+".jpg?v=1"; ART[n]=im; });
 [...MON_SMALL,...MON_BOSS].forEach(k=>{ const im=new Image(); im.src="sprites/mon/"+k+".png?v=3"; MON[k]=im; });
+DOGIMG.src="sprites/dogs.png?v=1";
 ["idle","guard","kick","gun","punch","special"].forEach(k=>{ const im=new Image(); im.src="sprites/mech/"+k+".png?v=1"; MECH[k]=im; });
 document.getElementById("howbtn").onclick=()=>alert(T("howtext"));
 if(muted){ const mb=document.getElementById("mutebtn"); if(mb)mb.textContent="🔇"; }
