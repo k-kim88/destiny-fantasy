@@ -413,6 +413,8 @@ const STAGES={
 const BG={}, ART={}, MON={};
 const MON_SMALL=["a0","a1","a2","a3","a4","a5","a6","a7","a8","a9","c0","c1","c2","c3","c4","c5","c6","c7","c8"];
 const MON_BOSS=["b0","b1","b2","b3","b4","b5","b6","b7","b8","b9"];
+// 스프라이트 원본이 바라보는 방향(1=오른쪽, -1=왼쪽; 정면형은 1). 좌우 반전 보정용
+const MON_FACE={a3:-1,a8:-1,b2:-1,b6:-1,b7:-1,c4:-1};
 function imgReady(st){ const im=st&&BG[st.img]; return im&&im.complete&&im.naturalWidth>0; }
 function sName(st){ return (lang==="ja"&&st.ja)?st.ja:st.name; }
 function sDesc(st){ return (lang==="ja"&&st.descja)?st.descja:st.desc; }
@@ -1092,7 +1094,7 @@ function drawEnemy(e){
   cx.save(); cx.translate(sx,sy+bob);
   const spr=e.spr&&MON[e.spr];
   if(spr&&spr.complete&&spr.naturalWidth){
-    const hh=e.r*3.7, ww=spr.naturalWidth/spr.naturalHeight*hh, face=(player.x<e.x)?-1:1;
+    const hh=e.r*3.7, ww=spr.naturalWidth/spr.naturalHeight*hh, face=((player.x<e.x)?-1:1)*(MON_FACE[e.spr]||1);
     cx.save(); cx.scale(face,1); cx.imageSmoothingEnabled=false; cx.drawImage(spr,-ww/2,-hh,ww,hh);
     if(hitw){ cx.globalAlpha=0.55; cx.globalCompositeOperation="lighter"; cx.drawImage(spr,-ww/2,-hh,ww,hh); cx.globalCompositeOperation="source-over"; cx.globalAlpha=1; }
     cx.imageSmoothingEnabled=true; cx.restore();
@@ -1615,7 +1617,7 @@ function drawKaiju(k){ const gy=k.y, sh=k.hurtT>0&&Math.floor(t/40)%2===0;
   const img=k.spr&&MON[k.spr];
   if(img&&img.complete&&img.naturalWidth){
     const dh=clamp(H*0.285,150,245)+wind0*10, dw=img.naturalWidth/img.naturalHeight*dh, shx=wind0>0?Math.sin(t*0.05)*4*wind0:0;
-    cx.save(); cx.translate(k.x+shx,gy); cx.scale(k.face,1);
+    cx.save(); cx.translate(k.x+shx,gy); cx.scale(-1*(MON_FACE[k.spr]||1),1); // 메카(왼쪽)를 바라보게
     cx.fillStyle="rgba(0,0,0,.4)"; cx.beginPath(); cx.ellipse(0,0,dw*0.30,14,0,0,TAU); cx.fill();
     cx.imageSmoothingEnabled=false; cx.drawImage(img,-dw/2,-dh,dw,dh);
     if(sh){ cx.globalAlpha=0.6; cx.globalCompositeOperation="lighter"; cx.drawImage(img,-dw/2,-dh,dw,dh); cx.globalCompositeOperation="source-over"; cx.globalAlpha=1; }
@@ -1655,9 +1657,12 @@ function drawMecha(m){ const gy=m.y, sh=m.hurtT>0&&Math.floor(t/50)%2===0, dh=cl
     if(sh){ cx.globalAlpha=0.5; cx.globalCompositeOperation="lighter"; cx.drawImage(img,-fx,-dh,dw,dh); cx.globalCompositeOperation="source-over"; cx.globalAlpha=1; }
     cx.imageSmoothingEnabled=true; cx.restore();
   } else { drawMechaVec(m); }
-  // 총 사격 트레이서
-  if(m.gunT>0){ const by=gy-dh*0.56; cx.save(); cx.globalAlpha=clamp(m.gunT/220,0,1)*0.9; cx.strokeStyle="#fff2a0"; cx.shadowColor="#ffd24a"; cx.shadowBlur=8; cx.lineWidth=3;
-    cx.beginPath(); cx.moveTo(m.x+m.face*dh*0.34,by); cx.lineTo(kaiju.x,by); cx.stroke(); cx.restore(); cx.globalAlpha=1; }
+  // 총 사격 빔 — 총구 위치에서 발사
+  if(m.gunT>0){ const gi=MECH.gun; let ox=m.x+m.face*dh*0.5, oy=gy-dh*0.75;
+    if(gi&&gi.naturalWidth){ const dwG=gi.naturalWidth/gi.naturalHeight*dh, fx0=MECH_META.gun.fx*dwG; ox=m.x+m.face*(-fx0+0.86*dwG); oy=gy-dh+0.25*dh; }
+    cx.save(); cx.globalAlpha=clamp(m.gunT/220,0,1)*0.95; cx.strokeStyle="#fff2a0"; cx.shadowColor="#ffd24a"; cx.shadowBlur=10; cx.lineWidth=4;
+    cx.beginPath(); cx.moveTo(ox,oy); cx.lineTo(kaiju.x,oy); cx.stroke();
+    cx.fillStyle="#fff"; cx.beginPath(); cx.arc(ox,oy,4,0,TAU); cx.fill(); cx.restore(); cx.globalAlpha=1; }
 }
 function drawMechaVec(m){ const col=CHARS[player.char].swatch, gy=m.y, sh=m.hurtT>0&&Math.floor(t/50)%2===0;
   cx.save(); cx.translate(m.x,gy); cx.scale(m.face,1);
