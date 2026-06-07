@@ -1569,10 +1569,10 @@ const BATTLE_GYF=0.52, COCKPIT_TOPF=0.54; // 전투 지면 / 콕피트 상단 (�
 function startMecha(){
   state="mecha"; document.getElementById("hud").classList.add("hidden"); document.getElementById("mechactrl").classList.remove("hidden");
   const nm=document.getElementById("ck_name"); if(nm)nm.textContent=chMorph(CHARS[player.char])+(lang==="ja"?" コクピット":" 콕피트");
-  const gy=H*BATTLE_GYF; mPow=9+player.stats.might*7+player.level*0.6;
-  mecha={x:W*0.30,y:gy,face:1,maxhp:Math.round(300+player.maxhp*0.5),atkCd:0,action:"",actionT:0,guard:false,sp:0,hurtT:0,gunT:0};
+  const gy=H*BATTLE_GYF; mPow=14+player.stats.might*8+player.level*0.9;
+  mecha={x:W*0.30,y:gy,face:1,maxhp:Math.round(380+player.maxhp*0.6),atkCd:0,action:"",actionT:0,guard:false,sp:0,hurtT:0,gunT:0};
   mecha.hp=mecha.maxhp;
-  kaiju={x:W*0.74,y:gy,face:-1,maxhp:Math.round(1100+player.level*55),atkCd:1800,action:"",actionT:0,hurtT:0,tele:0,beam:false,spr:MON_BOSS[(Math.random()*MON_BOSS.length)|0]};
+  kaiju={x:W*0.72,y:gy,face:-1,maxhp:Math.round(680+player.level*32),atkCd:1800,action:"",actionT:0,hurtT:0,tele:0,beam:false,spr:MON_BOSS[(Math.random()*MON_BOSS.length)|0]};
   kaiju.hp=kaiju.maxhp;
   introT=1900; mechaFlash=0; warn(lang==="ja"?"W A R N I N G":"W A R N I N G"); sfx("morph"); addShake(9,500);
   for(const k in mInput) mInput[k]=false;
@@ -1583,25 +1583,28 @@ function updateMecha(dt){ t+=dt;
   if(introT>0){ introT-=dt; return; }
   if(mecha.atkCd>0)mecha.atkCd-=dt; if(mecha.hurtT>0)mecha.hurtT-=dt; if(mecha.gunT>0)mecha.gunT-=dt; if(mecha.action&&(mecha.actionT-=dt)<=0)mecha.action="";
   if(mechaFlash>0)mechaFlash-=dt;
-  const sp=3.2; if(mInput.left)mecha.x-=sp; if(mInput.right)mecha.x+=sp; mecha.x=clamp(mecha.x,W*0.12,kaiju.x-66);
-  mecha.guard=mInput.guard; const dist=Math.abs(kaiju.x-mecha.x);
-  // 공격=검(근접 강타), 킥버튼=총(원거리), 필살=가슴 빔
-  if(mInput.punch){ mInput.punch=false; if(mecha.atkCd<=0&&!mecha.guard){ mecha.atkCd=360; mecha.action="sword"; mecha.actionT=320; if(dist<158){ bossHurt(mPow*2.1); kaiju.x+=8; sfx("slash"); } else sfx("slash"); } }
-  if(mInput.kick){ mInput.kick=false; if(mecha.atkCd<=0&&!mecha.guard){ mecha.atkCd=300; mecha.action="gun"; mecha.actionT=240; mecha.gunT=220; bossHurt(mPow*0.95); sfx("shoot"); } }
-  if(mInput.special){ mInput.special=false; if(mecha.sp>=100){ mecha.sp=0; mecha.action="special"; mecha.actionT=760; mechaFlash=420; bossHurt(mPow*10); addShake(16,520); sfx("boom"); } }
+  const MINGAP=90, REACH=220;
+  const sp=3.7; if(mInput.left)mecha.x-=sp; if(mInput.right)mecha.x+=sp; mecha.x=clamp(mecha.x,W*0.12,kaiju.x-MINGAP);
+  mecha.guard=mInput.guard; let dist=Math.abs(kaiju.x-mecha.x);
+  // 공격=검(근접 강타·전진), 킥버튼=총(원거리), 필살=가슴 빔
+  if(mInput.punch){ mInput.punch=false; if(mecha.atkCd<=0&&!mecha.guard){ mecha.atkCd=340; mecha.action="sword"; mecha.actionT=320;
+      mecha.x=clamp(mecha.x+30,W*0.12,kaiju.x-MINGAP); dist=Math.abs(kaiju.x-mecha.x);
+      if(dist<REACH){ bossHurt(mPow*2.6); kaiju.x=clamp(kaiju.x+14,mecha.x+MINGAP,W*0.9); } sfx("slash"); } }
+  if(mInput.kick){ mInput.kick=false; if(mecha.atkCd<=0&&!mecha.guard){ mecha.atkCd=300; mecha.action="gun"; mecha.actionT=240; mecha.gunT=220; bossHurt(mPow*1.35); sfx("shoot"); } }
+  if(mInput.special){ mInput.special=false; if(mecha.sp>=100){ mecha.sp=0; mecha.action="special"; mecha.actionT=760; mechaFlash=420; bossHurt(mPow*11); addShake(16,520); sfx("boom"); } }
   if(kaiju.hurtT>0)kaiju.hurtT-=dt; if(kaiju.action&&(kaiju.actionT-=dt)<=0)kaiju.action="";
   if(kaiju.tele>0){ kaiju.tele-=dt;
     if(kaiju.tele<=0){
-      if(kaiju.beam){ mechaHurt(mecha.guard?mPow*0.5:mPow*1.7); kaiju.beam=false; kaiju.action="beam"; kaiju.actionT=320; }
-      else { if(dist<160){ mechaHurt(mecha.guard?mPow*0.4:mPow*1.4); if(!mecha.guard)mecha.x=clamp(mecha.x-46,W*0.12,kaiju.x-66);} kaiju.action="hit"; kaiju.actionT=260; }
+      if(kaiju.beam){ mechaHurt(mecha.guard?mPow*0.5:mPow*1.3); kaiju.beam=false; kaiju.action="beam"; kaiju.actionT=320; }
+      else { if(dist<200){ mechaHurt(mecha.guard?mPow*0.4:mPow*1.05); if(!mecha.guard)mecha.x=clamp(mecha.x-40,W*0.12,kaiju.x-MINGAP);} kaiju.action="hit"; kaiju.actionT=260; }
     }
   } else { kaiju.atkCd-=dt;
-    if(dist>185){ kaiju.x-=1.5; }
-    else if(kaiju.atkCd<=0){ kaiju.atkCd=1300+Math.random()*900;
-      if(Math.random()<0.32){ kaiju.tele=620; kaiju.beam=true; kaiju.action="windbeam"; kaiju.actionT=620; }
-      else { kaiju.tele=480; kaiju.action="windup"; kaiju.actionT=480; } }
+    if(dist>REACH-6){ kaiju.x-=2.0; }
+    else if(kaiju.atkCd<=0){ kaiju.atkCd=1500+Math.random()*1000;
+      if(Math.random()<0.32){ kaiju.tele=640; kaiju.beam=true; kaiju.action="windbeam"; kaiju.actionT=640; }
+      else { kaiju.tele=500; kaiju.action="windup"; kaiju.actionT=500; } }
   }
-  kaiju.x=clamp(kaiju.x,mecha.x+60,W*0.9);
+  kaiju.x=clamp(kaiju.x,mecha.x+MINGAP,W*0.9);
   if(mecha.hp<=0){ document.getElementById("mechactrl").classList.add("hidden"); lose(); }
   else if(kaiju.hp<=0){ document.getElementById("mechactrl").classList.add("hidden"); startClear(); }
 }
@@ -1673,6 +1676,33 @@ function drawMechaVec(m){ const col=CHARS[player.char].swatch, gy=m.y, sh=m.hurt
 }
 function hbar(x,y,w,h,frac,col,flip){ cx.fillStyle="#000a"; cx.fillRect(x,y,w,h); cx.fillStyle="#2a3142"; cx.fillRect(x+2,y+2,w-4,h-4);
   const iw=(w-4)*clamp(frac,0,1); cx.fillStyle=col; cx.fillRect(flip?(x+w-2-iw):(x+2),y+2,iw,h-4); }
+function drawSubspace(vpb,gy){
+  const g=cx.createLinearGradient(0,0,0,vpb);
+  g.addColorStop(0,"#070512"); g.addColorStop(0.45,"#140a2e"); g.addColorStop(0.82,"#231046"); g.addColorStop(1,"#2a1250");
+  cx.fillStyle=g; cx.fillRect(0,0,W,vpb);
+  // 차원 포탈 오라
+  const pr=Math.min(W,vpb)*0.6, px=W/2, py=gy*0.6;
+  const rg=cx.createRadialGradient(px,py,pr*0.08,px,py,pr);
+  rg.addColorStop(0,"rgba(130,90,230,0.38)"); rg.addColorStop(0.5,"rgba(80,40,160,0.15)"); rg.addColorStop(1,"rgba(20,8,40,0)");
+  cx.fillStyle=rg; cx.beginPath(); cx.arc(px,py,pr,0,TAU); cx.fill();
+  // 떠다니는 별/입자 (결정적)
+  cx.save();
+  for(let i=0;i<70;i++){ const hx=((i*73856093)>>>0)%10000/10000, hy=((i*19349663)>>>0)%10000/10000;
+    const x=hx*W, y=(hy*gy + t*0.02*(0.3+hx))%gy;
+    cx.globalAlpha=(0.35+0.55*Math.abs(Math.sin(t*0.003+i)))*0.85;
+    cx.fillStyle=(i%5===0)?"#a9d6ff":"#d9c2ff"; const s=(i%7===0)?2:1; cx.fillRect(x,y,s,s); }
+  cx.restore(); cx.globalAlpha=1;
+  // 원근 그리드 바닥 (gy = 지평선, 소실점 W/2)
+  cx.save(); cx.lineWidth=1; const vpx=W/2, depth=vpb-gy;
+  cx.strokeStyle="rgba(120,95,225,0.32)";
+  for(let i=-7;i<=7;i++){ const bx=W/2+i*(W*0.16); cx.beginPath(); cx.moveTo(vpx+(bx-vpx)*0.05,gy); cx.lineTo(bx,vpb); cx.stroke(); }
+  cx.strokeStyle="rgba(90,200,230,0.32)";
+  for(let k=1;k<=10;k++){ const f=k/10, yy=gy+depth*(f*f); cx.globalAlpha=clamp(0.12+f*0.5,0,0.7); cx.beginPath(); cx.moveTo(0,yy); cx.lineTo(W,yy); cx.stroke(); }
+  cx.globalAlpha=1; cx.restore();
+  // 지평선 글로우 + 바닥 음영
+  cx.save(); cx.shadowColor="#6ad0ff"; cx.shadowBlur=14; cx.fillStyle="#8fe0ff"; cx.fillRect(0,gy-2,W,3); cx.restore();
+  cx.fillStyle="rgba(8,4,18,0.35)"; cx.fillRect(0,gy,W,vpb-gy);
+}
 function drawCanopy(vpb){ cx.save();
   const vg=cx.createRadialGradient(W/2,vpb*0.48,vpb*0.18,W/2,vpb*0.48,Math.max(W,vpb)*0.72);
   vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(0,0,0,0.5)"); cx.fillStyle=vg; cx.fillRect(0,0,W,vpb);
@@ -1683,11 +1713,7 @@ function renderMecha(){ cx.clearRect(0,0,W,H);
   const gy=H*BATTLE_GYF, vpb=Math.round(H*COCKPIT_TOPF);
   let shaken=false; if(shakeT>0){ shakeT-=16; const amp=shakeMag*Math.min(1,shakeT/160); cx.save(); cx.translate(rand(-amp,amp),rand(-amp,amp)); shaken=true; }
   cx.save(); cx.beginPath(); cx.rect(0,0,W,vpb); cx.clip(); // 전투는 상단 캐노피 뷰포트 안에서만
-  const img=BG[stage.img];
-  if(img&&img.complete&&img.naturalWidth){ const s=Math.max(W/img.naturalWidth,vpb/img.naturalHeight),dw=img.naturalWidth*s,dh=img.naturalHeight*s; cx.drawImage(img,(W-dw)/2,(vpb-dh)/2,dw,dh); }
-  else { cx.fillStyle="#0c1018"; cx.fillRect(0,0,W,vpb); }
-  cx.fillStyle="rgba(6,8,16,0.5)"; cx.fillRect(0,0,W,vpb);
-  cx.fillStyle="#15110c"; cx.fillRect(0,gy,W,vpb-gy); cx.fillStyle="#2a2114"; cx.fillRect(0,gy,W,4);
+  drawSubspace(vpb,gy);
   if(mechaFlash>0){ cx.fillStyle="rgba(255,255,255,"+clamp(mechaFlash/420,0,1)*0.6+")"; cx.fillRect(0,0,W,vpb); }
   drawKaiju(kaiju); drawMecha(mecha);
   if(warnT>0){ warnT-=16; const bl=(Math.floor(t/120)%2)===0,by=H*0.20,bh=78; cx.save(); cx.globalAlpha=0.9; cx.fillStyle="#120000"; cx.fillRect(0,by,W,bh);
@@ -1823,7 +1849,7 @@ function onSheetLoad(){ if(state==="title") drawPortraits(); }
 });
 ["ruins","lava","snow","forest"].forEach(n=>{ const im=new Image(); im.src="sprites/bg/"+n+".jpg?v=3"; BG[n]=im; });
 ["cut_gwangmin","cut_akane","cut_minmin"].forEach(n=>{ const im=new Image(); im.src="sprites/art/"+n+".jpg?v=1"; ART[n]=im; });
-[...MON_SMALL,...MON_BOSS].forEach(k=>{ const im=new Image(); im.src="sprites/mon/"+k+".png?v=2"; MON[k]=im; });
+[...MON_SMALL,...MON_BOSS].forEach(k=>{ const im=new Image(); im.src="sprites/mon/"+k+".png?v=3"; MON[k]=im; });
 ["idle","guard","kick","gun","punch","special"].forEach(k=>{ const im=new Image(); im.src="sprites/mech/"+k+".png?v=1"; MECH[k]=im; });
 document.getElementById("howbtn").onclick=()=>alert(T("howtext"));
 if(muted){ const mb=document.getElementById("mutebtn"); if(mb)mb.textContent="🔇"; }
